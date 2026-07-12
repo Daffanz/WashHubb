@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Procurement;
 
+use App\Models\Supplier;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StorePurchaseOrderRequest extends FormRequest
 {
@@ -20,5 +22,29 @@ class StorePurchaseOrderRequest extends FormRequest
             'items.*.jumlah'       => 'required|numeric|min:0.0001',
             'items.*.harga_satuan' => 'required|numeric|min:0',
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            if ($validator->errors()->any()) return;
+
+            $supplier = Supplier::find($this->supplier_id);
+            if (!$supplier) return;
+
+            // For bahan_baku PO: validate all items belong to the supplier
+            if ($this->jenis_po === 'bahan_baku') {
+                $supplierBahanBakuIds = $supplier->bahanBakus()->pluck('bahan_baku_id')->toArray();
+                foreach ($this->items as $i => $item) {
+                    if (($item['item_type'] ?? '') !== 'App\Models\BahanBaku') continue;
+                    if (!in_array($item['item_id'], $supplierBahanBakuIds)) {
+                        $validator->errors()->add(
+                            "items.{$i}.item_id",
+                            "Bahan baku ID {$item['item_id']} tidak tersedia di supplier ini."
+                        );
+                    }
+                }
+            }
+        });
     }
 }

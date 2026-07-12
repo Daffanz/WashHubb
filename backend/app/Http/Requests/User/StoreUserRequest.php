@@ -1,9 +1,7 @@
 <?php
-
 namespace App\Http\Requests\User;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Spatie\Permission\Models\Role;
 
 class StoreUserRequest extends FormRequest
 {
@@ -12,10 +10,11 @@ class StoreUserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'      => 'required|string|max:255',
+            'nama'      => 'required|string|max:255',
             'email'     => 'required|email|unique:users,email',
             'password'  => 'required|string|min:8',
-            'role'      => ['required', 'string', 'exists:roles,name'],
+            'no_telp'   => 'nullable|string|max:20',
+            'role_id'   => 'required|exists:roles,id',
             'status_id' => 'nullable|exists:statuses,id',
         ];
     }
