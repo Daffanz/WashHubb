@@ -1,22 +1,21 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Status extends Model
 {
-    protected $fillable = ['name', 'group', 'description'];
+    public $timestamps = false;
 
-    public function users(): HasMany
+    protected $fillable = ['konteks', 'kode', 'label'];
+
+    public function scopeForContext($query, string $konteks)
     {
-        return $this->hasMany(User::class);
+        return $query->where('konteks', $konteks);
     }
 
-    // Scopes per group
-    public function scopeForGroup($query, string $group)
+    public static function getByContext(string $konteks, string $kode): ?self
     {
-        return $query->where('group', $group);
+        return static::where('konteks', $konteks)->where('kode', $kode)->first();
     }
 }

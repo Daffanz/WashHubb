@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --color-wash-50: #f0fdf4;
+  --color-wash-100: #dcfce7;
+  --color-wash-200: #bbf7d0;
+  --color-wash-300: #86efac;
+  --color-wash-400: #4ade80;
+  --color-wash-500: #22c55e;
+  --color-wash-600: #16a34a;
+  --color-wash-700: #15803d;
+  --color-wash-800: #166534;
+  --color-wash-900: #052e16;
+  --color-wash-950: #022c0e;
+}
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #f8fafc;
+    color: #1e293b;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Sidebar scrollbar — warna thumb samakan dengan sidebar */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: #166534;
+  border-radius: 3px;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: #15803d;
+}
+
+/* Firefox scrollbar */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #166534 transparent;
+}

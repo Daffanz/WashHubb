@@ -1,26 +1,28 @@
 <?php
-
 namespace App\Models;
 
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens, HasRoles;
+    use HasFactory, Notifiable, HasApiTokens;
 
     protected $fillable = [
-        'name',
+        'nama',
         'email',
         'password',
+        'no_telp',
+        'role_id',
         'status_id',
+        'wajib_ganti_password',
     ];
 
     protected $hidden = [
@@ -33,7 +35,13 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'wajib_ganti_password' => 'boolean',
         ];
+    }
+
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class);
     }
 
     public function status(): BelongsTo
@@ -46,8 +54,18 @@ class User extends Authenticatable
         return $this->hasMany(Supplier::class);
     }
 
-    public function isActive(): bool
+    public function outlets(): BelongsToMany
     {
-        return $this->status?->name === 'aktif';
+        return $this->belongsToMany(Outlet::class, 'user_outlets')->withTimestamps();
+    }
+
+    public function hasPermission(string $kode): bool
+    {
+        return $this->role?->permissions()->where('kode', $kode)->exists();
+    }
+
+    public function hasRole(string $kode): bool
+    {
+        return $this->role?->kode === $kode;
     }
 }

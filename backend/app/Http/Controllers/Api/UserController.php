@@ -1,39 +1,52 @@
 <?php
-
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
-use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Models\Status;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): JsonResponse
     {
-        return UserResource::collection(
-            User::with('roles', 'status')->paginate(15)
-        );
+        $users = User::with(['role', 'status'])->paginate(15);
+
+        return response()->json([
+            'data' => $users->map(fn ($u) => $this->formatUser($u)),
+            'meta' => [
+                'current_page' => $users->currentPage(),
+                'last_page'    => $users->lastPage(),
+                'per_page'     => $users->perPage(),
+                'total'        => $users->total(),
+            ],
+        ]);
     }
 
     public function store(StoreUserRequest $request): JsonResponse
     {
-        $user = User::create($request->validated());
-        $user->assignRole($request->role);
+        $data = $request->validated();
+        // Auto-set status to "aktif" if not provided
+        if (empty($data['status_id'])) {
+            $aktifStatus = Status::where('konteks', 'akun')->where('kode', 'aktif')->first();
+            $data['status_id'] = $aktifStatus?->id;
+        }
+
+        $user = User::create($data);
 
         return response()->json([
             'message' => 'User berhasil dibuat.',
-            'data'    => new UserResource($user->load('roles', 'status')),
+            'data'    => $this->formatUser($user->load(['role', 'status'])),
         ], 201);
     }
 
     public function show(User $user): JsonResponse
     {
         return response()->json([
-            'data' => new UserResource($user->load('roles', 'status')),
+            'data' => $this->formatUser($user->load(['role', 'status'])),
         ]);
     }
 
@@ -41,13 +54,9 @@ class UserController extends Controller
     {
         $user->update($request->validated());
 
-        if ($request->filled('role')) {
-            $user->syncRoles([$request->role]);
-        }
-
         return response()->json([
             'message' => 'User berhasil diperbarui.',
-            'data'    => new UserResource($user->load('roles', 'status')),
+            'data'    => $this->formatUser($user->fresh()->load(['role', 'status'])),
         ]);
     }
 
@@ -55,7 +64,20 @@ class UserController extends Controller
     {
         $user->tokens()->delete();
         $user->delete();
-
         return response()->json(['message' => 'User berhasil dihapus.']);
+    }
+
+    private function formatUser($u): array
+    {
+        return [
+            'id'         => $u->id,
+            'nama'       => $u->nama,
+            'email'      => $u->email,
+            'no_telp'    => $u->no_telp,
+            'role'       => $u->role ? ['id' => $u->role->id, 'kode' => $u->role->kode, 'label' => $u->role->label] : null,
+            'status'     => $u->status ? ['id' => $u->status->id, 'kode' => $u->status->kode, 'label' => $u->status->label] : null,
+            'wajib_ganti_password' => $u->wajib_ganti_password,
+            'created_at' => $u->created_at?->toDateTimeString(),
+        ];
     }
 }

@@ -1,10 +1,8 @@
 <?php
-
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
-use App\Http\Resources\UserResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -18,7 +16,7 @@ class AuthController extends Controller
 
         $user = auth()->user();
 
-        if ($user->status?->name === 'nonaktif') {
+        if ($user->status?->kode === 'nonaktif') {
             auth()->logout();
             return response()->json(['message' => 'Akun Anda nonaktif.'], 403);
         }
@@ -29,7 +27,7 @@ class AuthController extends Controller
             'message' => 'Login berhasil.',
             'data' => [
                 'token' => $token,
-                'user'  => new UserResource($user->load('roles', 'status')),
+                'user'  => $this->formatUser($user->load('role', 'status')),
             ],
         ]);
     }
@@ -37,14 +35,27 @@ class AuthController extends Controller
     public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();
-
         return response()->json(['message' => 'Logout berhasil.']);
     }
 
     public function me(Request $request): JsonResponse
     {
         return response()->json([
-            'data' => new UserResource($request->user()->load('roles', 'permissions', 'status')),
+            'data' => $this->formatUser($request->user()->load('role', 'role.permissions', 'status')),
         ]);
+    }
+
+    private function formatUser($user): array
+    {
+        return [
+            'id'          => $user->id,
+            'nama'        => $user->nama,
+            'email'       => $user->email,
+            'no_telp'     => $user->no_telp,
+            'role'        => $user->role ? ['id' => $user->role->id, 'kode' => $user->role->kode, 'label' => $user->role->label] : null,
+            'permissions' => $user->role?->permissions->pluck('kode') ?? [],
+            'status'      => $user->status ? ['id' => $user->status->id, 'kode' => $user->status->kode, 'label' => $user->status->label] : null,
+            'created_at'  => $user->created_at?->toDateTimeString(),
+        ];
     }
 }

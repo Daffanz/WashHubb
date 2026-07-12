@@ -1,0 +1,31 @@
+<?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('suppliers', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->enum('jenis_supplier', ['bahan_baku', 'mesin']);
+            $table->text('alamat');
+            $table->text('katalog_produk')->nullable();
+            $table->foreignId('status_id')->nullable()->constrained('statuses')->nullOnDelete();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::create('manajer_operasionals', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->timestamps();
+        });
+    }
+    public function down(): void {
+        Schema::dropIfExists('manajer_operasionals');
+        Schema::dropIfExists('suppliers');
+    }
+};

@@ -4,42 +4,55 @@ namespace App\Http\Controllers\Api\Master;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Master\StoreJenisLayananRequest;
-use App\Http\Resources\Master\JenisLayananResource;
 use App\Models\JenisLayanan;
+use App\Models\Status;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class JenisLayananController extends Controller
 {
-    public function index(): AnonymousResourceCollection
+    public function index(): JsonResponse
     {
-        return JenisLayananResource::collection(
-            JenisLayanan::with('materials')->paginate(15)
-        );
+        $layanans = JenisLayanan::with('materials', 'status')->paginate(15);
+
+        return response()->json([
+            'data' => $layanans->map(fn ($l) => $this->formatLayanan($l)),
+            'meta' => [
+                'current_page' => $layanans->currentPage(),
+                'last_page'    => $layanans->lastPage(),
+                'per_page'     => $layanans->perPage(),
+                'total'        => $layanans->total(),
+            ],
+        ]);
     }
 
     public function store(StoreJenisLayananRequest $request): JsonResponse
     {
-        $layanan = JenisLayanan::create($request->validated());
+        $data = $request->validated();
+        if (empty($data['status_id'])) {
+            $aktifStatus = Status::where('konteks', 'jenis_layanan')->where('kode', 'aktif')->first();
+            $data['status_id'] = $aktifStatus?->id;
+        }
+
+        $layanan = JenisLayanan::create($data);
 
         return response()->json([
             'message' => 'Jenis layanan berhasil dibuat.',
-            'data'    => new JenisLayananResource($layanan->load('materials')),
+            'data'    => $this->formatLayanan($layanan->load(['materials', 'status'])),
         ], 201);
     }
 
     public function show(JenisLayanan $jenisLayanan): JsonResponse
     {
         return response()->json([
-            'data' => new JenisLayananResource($jenisLayanan->load('materials')),
+            'data' => $this->formatLayanan($jenisLayanan->load(['materials', 'status'])),
         ]);
     }
 
     public function update(Request $request, JenisLayanan $jenisLayanan): JsonResponse
     {
         $request->validate([
-            'nama'                => 'sometimes|string|max:255',
+            'nama'                 => 'sometimes|string|max:255',
             'harga_standar_per_kg' => 'sometimes|numeric|min:0',
         ]);
 
@@ -47,22 +60,21 @@ class JenisLayananController extends Controller
 
         return response()->json([
             'message' => 'Jenis layanan berhasil diperbarui.',
-            'data'    => new JenisLayananResource($jenisLayanan->load('materials')),
+            'data'    => $this->formatLayanan($jenisLayanan->load(['materials', 'status'])),
         ]);
     }
 
     public function destroy(JenisLayanan $jenisLayanan): JsonResponse
     {
         $jenisLayanan->delete();
-
         return response()->json(['message' => 'Jenis layanan berhasil dihapus.']);
     }
 
     public function attachMaterial(Request $request, JenisLayanan $jenisLayanan): JsonResponse
     {
         $request->validate([
-            'bahan_baku_id'    => 'required|exists:bahan_bakus,id',
-            'jumlah_konsumsi'  => 'required|numeric|min:0.0001',
+            'bahan_baku_id'   => 'required|exists:bahan_bakus,id',
+            'jumlah_konsumsi' => 'required|numeric|min:0.0001',
         ]);
 
         $jenisLayanan->materials()->syncWithoutDetaching([
@@ -71,7 +83,7 @@ class JenisLayananController extends Controller
 
         return response()->json([
             'message' => 'Material berhasil ditambahkan ke layanan.',
-            'data'    => new JenisLayananResource($jenisLayanan->fresh()->load('materials')),
+            'data'    => $this->formatLayanan($jenisLayanan->fresh()->load(['materials', 'status'])),
         ]);
     }
 
@@ -81,7 +93,25 @@ class JenisLayananController extends Controller
 
         return response()->json([
             'message' => 'Material berhasil dihapus dari layanan.',
-            'data'    => new JenisLayananResource($jenisLayanan->fresh()->load('materials')),
+            'data'    => $this->formatLayanan($jenisLayanan->fresh()->load(['materials', 'status'])),
         ]);
+    }
+
+    private function formatLayanan($l): array
+    {
+        return [
+            'id'                   => $l->id,
+            'nama'                 => $l->nama,
+            'harga_standar_per_kg' => (float) $l->harga_standar_per_kg,
+            'status'               => $l->status ? ['id' => $l->status->id, 'kode' => $l->status->kode, 'label' => $l->status->label] : null,
+            'materials'            => $l->materials->map(fn ($m) => [
+                'id'              => $m->id,
+                'nama'            => $m->nama,
+                'satuan'          => $m->satuan,
+                'harga_standar'   => (float) $m->harga_standar,
+                'jumlah_konsumsi' => (float) $m->pivot->jumlah_konsumsi,
+            ]),
+            'created_at' => $l->created_at?->toDateTimeString(),
+        ];
     }
 }

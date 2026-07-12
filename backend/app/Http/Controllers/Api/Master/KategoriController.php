@@ -5,18 +5,29 @@ namespace App\Http\Controllers\Api\Master;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Master\StoreKategoriRequest;
 use App\Http\Requests\Master\UpdateKategoriRequest;
-use App\Http\Resources\Master\KategoriResource;
 use App\Models\KategoriBahanBaku;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class KategoriController extends Controller
 {
-    public function index(): AnonymousResourceCollection
+    public function index(): JsonResponse
     {
-        return KategoriResource::collection(
-            KategoriBahanBaku::withCount('bahanBakus')->paginate(15)
-        );
+        $kategoris = KategoriBahanBaku::withCount('bahanBakus')->paginate(15);
+
+        return response()->json([
+            'data' => $kategoris->map(fn ($k) => [
+                'id'               => $k->id,
+                'nama'             => $k->nama,
+                'bahan_bakus_count' => $k->bahan_bakus_count,
+                'created_at'       => $k->created_at?->toDateTimeString(),
+            ]),
+            'meta' => [
+                'current_page' => $kategoris->currentPage(),
+                'last_page'    => $kategoris->lastPage(),
+                'per_page'     => $kategoris->perPage(),
+                'total'        => $kategoris->total(),
+            ],
+        ]);
     }
 
     public function store(StoreKategoriRequest $request): JsonResponse
@@ -25,14 +36,19 @@ class KategoriController extends Controller
 
         return response()->json([
             'message' => 'Kategori berhasil dibuat.',
-            'data'    => new KategoriResource($kategori),
+            'data'    => ['id' => $kategori->id, 'nama' => $kategori->nama, 'created_at' => $kategori->created_at?->toDateTimeString()],
         ], 201);
     }
 
     public function show(KategoriBahanBaku $kategori): JsonResponse
     {
         return response()->json([
-            'data' => new KategoriResource($kategori->loadCount('bahanBakus')),
+            'data' => [
+                'id'               => $kategori->id,
+                'nama'             => $kategori->nama,
+                'bahan_bakus_count' => $kategori->bahanBakus()->count(),
+                'created_at'       => $kategori->created_at?->toDateTimeString(),
+            ],
         ]);
     }
 
@@ -42,7 +58,7 @@ class KategoriController extends Controller
 
         return response()->json([
             'message' => 'Kategori berhasil diperbarui.',
-            'data'    => new KategoriResource($kategori),
+            'data'    => ['id' => $kategori->id, 'nama' => $kategori->nama],
         ]);
     }
 

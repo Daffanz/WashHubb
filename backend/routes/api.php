@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\SupplierController;
+use App\Http\Controllers\Api\StatusController;
 use App\Http\Controllers\Api\Master\KategoriController;
 use App\Http\Controllers\Api\Master\BahanBakuController;
 use App\Http\Controllers\Api\Master\JenisLayananController;
@@ -12,22 +13,30 @@ use App\Http\Controllers\Api\Master\MesinController;
 use App\Http\Controllers\Api\Procurement\PurchaseOrderController;
 use App\Http\Controllers\Api\Procurement\DistribusiController;
 use App\Http\Controllers\Api\Procurement\PenerimaanController;
+use App\Http\Controllers\Api\Procurement\ReturController;
+use App\Http\Controllers\Api\SupplierStockController;
 use App\Http\Controllers\Api\Inventory\StockController;
 use App\Http\Controllers\Api\Inventory\MutasiController;
+use App\Http\Controllers\Api\ForgotPasswordController;
 use Illuminate\Support\Facades\Route;
 
 // Auth (public)
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
-
+    Route::post('/forgot-password/check-email', [ForgotPasswordController::class, 'checkEmail']);
+    Route::post('/forgot-password/reset', [ForgotPasswordController::class, 'resetPassword']);
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
-        Route::get('/me',     [AuthController::class, 'me']);
+        Route::get('/me', [AuthController::class, 'me']);
     });
 });
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
+
+    // Statuses
+    Route::get('/statuses', [StatusController::class, 'index']);
+    Route::get('/statuses/{konteks}', [StatusController::class, 'byContext']);
 
     // --- Modul 1: Account & Supplier ---
     Route::middleware('permission:user-list')->get('/users', [UserController::class, 'index']);
@@ -48,6 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:supplier-list')->get('/suppliers', [SupplierController::class, 'index']);
     Route::middleware('permission:supplier-create')->post('/suppliers', [SupplierController::class, 'store']);
     Route::middleware('permission:supplier-list')->get('/suppliers/{supplier}', [SupplierController::class, 'show']);
+    Route::middleware('permission:supplier-list')->get('/suppliers/{supplier}/items', [SupplierController::class, 'items']);
     Route::middleware('permission:supplier-edit')->put('/suppliers/{supplier}', [SupplierController::class, 'update']);
     Route::middleware('permission:supplier-delete')->delete('/suppliers/{supplier}', [SupplierController::class, 'destroy']);
 
@@ -87,7 +97,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('permission:po-list')->get('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show']);
         Route::middleware('permission:po-edit')->put('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update']);
         Route::middleware('permission:po-delete')->delete('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'destroy']);
+        Route::middleware('permission:po-kirim')->patch('/purchase-orders/{purchaseOrder}/kirim', [PurchaseOrderController::class, 'kirim']);
         Route::middleware('permission:po-validate')->patch('/purchase-orders/{purchaseOrder}/validate', [PurchaseOrderController::class, 'validatePo']);
+        Route::middleware('permission:po-validate')->patch('/purchase-orders/{purchaseOrder}/items/{itemId}/validate', [PurchaseOrderController::class, 'validateItem']);
+
+        // Supplier Stock
+        Route::get('/supplier-stocks', [SupplierStockController::class, 'index']);
+        Route::post('/supplier-stocks', [SupplierStockController::class, 'store']);
+        Route::delete('/supplier-stocks/{id}', [SupplierStockController::class, 'destroy']);
 
         Route::middleware('permission:distribution-list')->get('/distributions', [DistribusiController::class, 'index']);
         Route::middleware('permission:distribution-create')->post('/distributions', [DistribusiController::class, 'store']);
@@ -96,12 +113,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('permission:receipt-list')->get('/receipts', [PenerimaanController::class, 'index']);
         Route::middleware('permission:receipt-create')->post('/receipts', [PenerimaanController::class, 'store']);
         Route::middleware('permission:receipt-list')->get('/receipts/{penerimaan}', [PenerimaanController::class, 'show']);
+
+        // Retur
+        Route::middleware('permission:retur-list')->get('/returns', [ReturController::class, 'index']);
+        Route::middleware('permission:retur-create')->post('/returns', [ReturController::class, 'store']);
+        Route::middleware('permission:retur-list')->get('/returns/{retur}', [ReturController::class, 'show']);
+        Route::middleware('permission:retur-validate')->patch('/returns/{retur}/confirm', [ReturController::class, 'confirm']);
     });
 
     // --- Modul 4: Inventory ---
     Route::prefix('inventory')->group(function () {
         Route::middleware('permission:stock-list')->get('/stocks', [StockController::class, 'index']);
         Route::middleware('permission:stock-view')->get('/stocks/{type}/{id}', [StockController::class, 'show']);
+        Route::middleware('permission:stock-manage')->post('/stocks', [StockController::class, 'store']);
 
         Route::middleware('permission:mutation-list')->get('/mutations', [MutasiController::class, 'index']);
         Route::middleware('permission:mutation-create')->post('/mutations', [MutasiController::class, 'store']);
