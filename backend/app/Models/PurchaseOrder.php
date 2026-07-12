@@ -36,4 +36,6 @@ class PurchaseOrder extends Model
 
     public function isDiajukan(): bool { return $this->status?->kode === 'diajukan'; }
     public function isDikirim(): bool { return $this->status?->kode === 'dikirim'; }
+    public function isDisetujui(): bool { return $this->status?->kode === 'disetujui'; }
+    public function isSelesai(): bool { return $this->status?->kode === 'selesai'; }
 }

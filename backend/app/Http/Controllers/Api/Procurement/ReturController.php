@@ -12,15 +12,37 @@ use Illuminate\Support\Facades\DB;
 
 class ReturController extends Controller
 {
-    public function index(): JsonResponse
+    /**
+     * Supplier hanya lihat retur dari PO miliknya
+     */
+    public function index(Request $request): JsonResponse
     {
-        $returs = ReturBarang::with(['penerimaanBarang.distribusiBarang', 'status'])->paginate(15);
+        $query = ReturBarang::with(['penerimaanBarang.distribusiBarang.po.supplier.user', 'status', 'detailBahanBakus.status', 'detailMesins.status']);
+
+        if ($request->user()->hasRole('supplier')) {
+            $supplier = $request->user()->suppliers()->first();
+            if ($supplier) {
+                $query->whereHas('penerimaanBarang.distribusiBarang.po', fn ($q) => $q->where('supplier_id', $supplier->id));
+            }
+        }
+
+        $returs = $query->orderByDesc('created_at')->paginate(15);
         return response()->json([
             'data' => $returs->map(fn ($r) => $this->formatRetur($r)),
             'meta' => ['current_page' => $returs->currentPage(), 'last_page' => $returs->lastPage(), 'per_page' => $returs->perPage(), 'total' => $returs->total()],
         ]);
     }
 
+    public function show(ReturBarang $retur): JsonResponse
+    {
+        $retur->load(['penerimaanBarang.distribusiBarang.po.supplier.user', 'status', 'detailBahanBakus.penerimaanDetail', 'detailMesins.penerimaanDetail', 'detailBahanBakus.status', 'detailMesins.status']);
+        return response()->json(['data' => $this->formatRetur($retur)]);
+    }
+
+    /**
+     * Buat retur manual oleh Tim Pengadaan
+     * Referensi ke penerimaan_barang yang sudah ada
+     */
     public function store(Request $request): JsonResponse
     {
         $request->validate([
@@ -78,54 +100,111 @@ class ReturController extends Controller
         ], 201);
     }
 
-    public function show(ReturBarang $retur): JsonResponse
+    /**
+     * UC-37: Supplier kirim pengganti → retur → pengganti_dikirim
+     * Stok supplier berkurang untuk barang pengganti
+     */
+    public function kirimPengganti(Request $request, ReturBarang $retur): JsonResponse
     {
-        return response()->json([
-            'data' => $this->formatRetur($retur->load(['penerimaanBarang.distribusiBarang', 'status', 'detailBahanBakus.penerimaanDetail', 'detailMesins.penerimaanDetail'])),
+        if ($retur->status?->kode !== 'menunggu_pengganti') {
+            return response()->json(['message' => 'Retur harus berstatus menunggu_pengganti.'], 422);
+        }
+
+        $request->validate([
+            'items_bahan_baku' => 'sometimes|array',
+            'items_bahan_baku.*.retur_detail_id' => 'required|exists:retur_detail_bahan_bakus,id',
+            'items_bahan_baku.*.qty_pengganti' => 'required|numeric|min:1',
+            'items_mesin' => 'sometimes|array',
+            'items_mesin.*.retur_detail_id' => 'required|exists:retur_detail_mesins,id',
+            'items_mesin.*.qty_pengganti' => 'required|integer|min:1',
+            'items_mesin.*.nomor_seri_pengganti' => 'nullable|string',
         ]);
+
+        $kirimStatus = Status::where('konteks', 'retur_barang')->where('kode', 'pengganti_dikirim')->first();
+
+        DB::transaction(function () use ($request, $retur, $kirimStatus) {
+            // Update detail retur
+            if ($request->filled('items_bahan_baku')) {
+                foreach ($request->items_bahan_baku as $item) {
+                    $detail = ReturDetailBahanBaku::where('id', $item['retur_detail_id'])
+                        ->where('retur_barang_id', $retur->id)->first();
+                    if ($detail) {
+                        $detail->update(['qty_pengganti' => $item['qty_pengganti'], 'status_id' => $kirimStatus?->id]);
+                    }
+                }
+            }
+
+            if ($request->filled('items_mesin')) {
+                foreach ($request->items_mesin as $item) {
+                    $detail = ReturDetailMesin::where('id', $item['retur_detail_id'])
+                        ->where('retur_barang_id', $retur->id)->first();
+                    if ($detail) {
+                        $detail->update([
+                            'qty_pengganti' => $item['qty_pengganti'],
+                            'nomor_seri_pengganti' => $item['nomor_seri_pengganti'] ?? null,
+                            'status_id' => $kirimStatus?->id,
+                        ]);
+                    }
+                }
+            }
+
+            $retur->update(['status_id' => $kirimStatus?->id]);
+        });
+
+        return response()->json(['message' => 'Pengganti berhasil dikirim.']);
     }
 
+    /**
+     * UC-38: Tim Pengadaan konfirmasi
+     * - Sesuai → stok perusahaan bertambah, distribusi → diterima, retur → selesai
+     * - Tidak sesuai → retur stays menunggu_pengganti, supplier kirim lagi
+     */
     public function confirm(Request $request, ReturBarang $retur): JsonResponse
     {
-        $request->validate(['status' => 'required|in:selesai,ditolak']);
+        $request->validate([
+            'status' => 'required|in:selesai,ditolak',
+            'items_bahan_baku' => 'sometimes|array',
+            'items_bahan_baku.*.retur_detail_id' => 'required|exists:retur_detail_bahan_bakus,id',
+            'items_bahan_baku.*.qty_pengganti' => 'required|numeric|min:0',
+            'items_mesin' => 'sometimes|array',
+            'items_mesin.*.retur_detail_id' => 'required|exists:retur_detail_mesins,id',
+            'items_mesin.*.qty_pengganti' => 'required|integer|min:0',
+        ]);
 
-        $stockService = new \App\Services\StockService();
-
-        DB::transaction(function () use ($request, $retur, $stockService) {
+        DB::transaction(function () use ($request, $retur) {
             if ($request->status === 'selesai') {
                 $selesaiStatus = Status::where('konteks', 'retur_barang')->where('kode', 'selesai')->first();
                 $retur->update(['status_id' => $selesaiStatus?->id]);
-                $retur->detailBahanBakus()->update(['status_id' => $selesaiStatus?->id]);
-                $retur->detailMesins()->update(['status_id' => $selesaiStatus?->id]);
 
-                // Stok pusat bertambah untuk barang pengganti
-                foreach ($retur->detailBahanBakus as $detail) {
-                    if ($detail->qty_pengganti > 0) {
-                        $stockService->increaseStockFromRetur($detail);
+                // Update qty_pengganti final per detail
+                if ($request->filled('items_bahan_baku')) {
+                    foreach ($request->items_bahan_baku as $item) {
+                        ReturDetailBahanBaku::where('id', $item['retur_detail_id'])
+                            ->where('retur_barang_id', $retur->id)
+                            ->update(['qty_pengganti' => $item['qty_pengganti'], 'status_id' => $selesaiStatus?->id]);
                     }
                 }
-                foreach ($retur->detailMesins as $detail) {
-                    if ($detail->qty_pengganti > 0) {
-                        $stockService->increaseStockFromRetur($detail);
+                if ($request->filled('items_mesin')) {
+                    foreach ($request->items_mesin as $item) {
+                        ReturDetailMesin::where('id', $item['retur_detail_id'])
+                            ->where('retur_barang_id', $retur->id)
+                            ->update(['qty_pengganti' => $item['qty_pengganti'], 'status_id' => $selesaiStatus?->id]);
                     }
                 }
 
-                // Update distribusi status → diterima
-                $diterimaStatus = Status::where('konteks', 'distribusi_barang')->where('kode', 'diterima')->first();
-                $retur->penerimaanBarang->distribusiBarang->update(['status_id' => $diterimaStatus?->id]);
+                // Update receipt status → selesai (stok perusahaan bertambah via MutasiController)
+                $selesaiReceipt = Status::where('konteks', 'penerimaan_barang')->where('kode', 'selesai')->first();
+                $retur->penerimaanBarang->update(['status_id' => $selesaiReceipt?->id]);
 
-                // Cek apakah PO selesai
+                // Cek PO selesai
                 $this->checkPoSelesai($retur->penerimaanBarang->distribusiBarang->po);
             }
-            // If ditolak, status stays menunggu_pengganti
+            // If ditolak → status stays menunggu_pengganti, supplier kirim lagi
         });
 
         return response()->json(['message' => 'Retur berhasil dikonfirmasi.']);
     }
 
-    /**
-     * PRD §4.7: PO selesai = semua distribusi diterima + tidak ada retur aktif
-     */
     private function checkPoSelesai($po): void
     {
         $allDiterima = $po->distribusiBarangs()
@@ -135,7 +214,7 @@ class ReturController extends Controller
 
         if ($totalDist === 0 || $allDiterima < $totalDist) return;
 
-        $activeRetur = \App\Models\ReturBarang::whereHas('penerimaanBarang', fn ($q) => $q->where('distribusi_barang_id', $po->distribusiBarangs()->pluck('id')))
+        $activeRetur = ReturBarang::whereHas('penerimaanBarang', fn ($q) => $q->where('distribusi_barang_id', $po->distribusiBarangs()->pluck('id')))
             ->whereHas('status', fn ($q) => $q->whereIn('kode', ['menunggu_pengganti', 'pengganti_dikirim']))
             ->count();
 
@@ -150,10 +229,23 @@ class ReturController extends Controller
         return [
             'id' => $r->id,
             'penerimaan_barang_id' => $r->penerimaan_barang_id,
+            'po' => $r->penerimaanBarang?->distribusiBarang?->po ? [
+                'id' => $r->penerimaanBarang->distribusiBarang->po->id,
+                'nomor_po' => $r->penerimaanBarang->distribusiBarang->po->nomor_po,
+                'supplier' => $r->penerimaanBarang->distribusiBarang->po->supplier?->user?->nama,
+            ] : null,
             'tanggal_retur' => $r->tanggal_retur?->toDateTimeString(),
             'status' => $r->status ? ['id' => $r->status->id, 'kode' => $r->status->kode, 'label' => $r->status->label] : null,
-            'detail_bahan_baku' => $r->detailBahanBakus->map(fn ($d) => ['id' => $d->id, 'qty_retur' => $d->qty_retur, 'alasan' => $d->alasan, 'qty_pengganti' => $d->qty_pengganti]),
-            'detail_mesin' => $r->detailMesins->map(fn ($d) => ['id' => $d->id, 'qty_retur' => $d->qty_retur, 'alasan' => $d->alasan, 'qty_pengganti' => $d->qty_pengganti, 'nomor_seri_pengganti' => $d->nomor_seri_pengganti]),
+            'detail_bahan_baku' => $r->detailBahanBakus->map(fn ($d) => [
+                'id' => $d->id, 'qty_retur' => $d->qty_retur, 'alasan' => $d->alasan,
+                'qty_pengganti' => $d->qty_pengganti,
+                'status' => $d->status ? ['kode' => $d->status->kode, 'label' => $d->status->label] : null,
+            ]),
+            'detail_mesin' => $r->detailMesins->map(fn ($d) => [
+                'id' => $d->id, 'qty_retur' => $d->qty_retur, 'alasan' => $d->alasan,
+                'qty_pengganti' => $d->qty_pengganti, 'nomor_seri_pengganti' => $d->nomor_seri_pengganti,
+                'status' => $d->status ? ['kode' => $d->status->kode, 'label' => $d->status->label] : null,
+            ]),
             'created_at' => $r->created_at?->toDateTimeString(),
         ];
     }

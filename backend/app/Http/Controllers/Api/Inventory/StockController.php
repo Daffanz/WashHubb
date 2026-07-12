@@ -4,11 +4,8 @@ namespace App\Http\Controllers\Api\Inventory;
 use App\Http\Controllers\Controller;
 use App\Models\StokPusatBahanBaku;
 use App\Models\StokPusatMesin;
-use App\Models\MutasiStokPusatBahanBaku;
-use App\Models\MutasiStokPusatMesin;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class StockController extends Controller
 {

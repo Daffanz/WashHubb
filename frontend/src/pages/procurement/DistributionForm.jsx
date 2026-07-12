@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import PageHeader from '../../components/ui/PageHeader';
 import FormInput from '../../components/ui/FormInput';
+import FormTextarea from '../../components/ui/FormTextarea';
 import FormActions from '../../components/ui/FormActions';
+import { formatQty } from '../../utils/format';
 
 export default function DistributionForm() {
   const navigate = useNavigate();
@@ -17,9 +19,10 @@ export default function DistributionForm() {
 
   useEffect(() => {
     const token = localStorage.getItem('washhub_token');
+    // UC-35: Supplier lihat PO yang sudah disetujui
     fetch('/api/procurement/purchase-orders?per_page=100', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json()).then(d => {
-        setPoOptions((d.data || []).filter(po => po.status?.kode === 'disetujui' || po.status?.kode === 'disetujui_sebagian').map(po => ({ value: po.id, label: `${po.nomor_po} - ${po.supplier?.nama || ''}` })));
+        setPoOptions((d.data || []).filter(po => po.status?.kode === 'disetujui' || po.status?.kode === 'disetujui_sebagian').map(po => ({ value: po.id, label: `${po.nomor_po} - ${po.supplier?.nama || ''} (${po.status?.label})` })));
       });
   }, []);
 
@@ -30,8 +33,9 @@ export default function DistributionForm() {
       .then(r => r.json()).then(d => {
         const po = d.data;
         setSelectedPO(po);
-        setItemsBB((po.items_bahan_baku || []).filter(i => i.status !== 'ditolak').map(i => ({ po_item_id: i.id, nama: i.nama, jumlah_disetujui: i.qty_disetujui || i.jumlah, jumlah_kirim: i.qty_disetujui || i.jumlah })));
-        setItemsMesin((po.items_mesin || []).filter(i => i.status !== 'ditolak').map(i => ({ po_item_id: i.id, nama: i.nama, jumlah_disetujui: i.qty_disetujui || i.jumlah, jumlah_kirim: i.qty_disetujui || i.jumlah })));
+        // Hanya item yang disetujui
+        setItemsBB((po.items_bahan_baku || []).filter(i => i.status === 'disetujui' || i.status === 'disetujui_sebagian').map(i => ({ po_item_id: i.id, nama: i.nama, qty_disetujui: i.qty_disetujui, jumlah_kirim: i.qty_disetujui })));
+        setItemsMesin((po.items_mesin || []).filter(i => i.status === 'disetujui' || i.status === 'disetujui_sebagian').map(i => ({ po_item_id: i.id, nama: i.nama, qty_disetujui: i.qty_disetujui, jumlah_kirim: i.qty_disetujui })));
       });
   };
 
@@ -44,7 +48,8 @@ export default function DistributionForm() {
     try {
       const res = await fetch('/api/procurement/distributions', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${localStorage.getItem('washhub_token')}` }, body: JSON.stringify(payload) });
       if (!res.ok) { const d = await res.json(); setErrors(d.errors || {}); throw new Error(d.message); }
-      toast.success('Distribusi berhasil dibuat'); navigate('/procurement/distributions');
+      toast.success('Distribusi berhasil dibuat');
+      navigate('/procurement/distributions');
     } catch (err) { toast.error(err.message || 'Terjadi kesalahan'); }
     setLoading(false);
   };
@@ -57,7 +62,7 @@ export default function DistributionForm() {
           <h3 className="text-sm font-semibold text-gray-900 mb-4">Info Distribusi</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Purchase Order *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Purchase Order (Disetujui) *</label>
               <select value={form.po_id} onChange={(e) => handlePOSelect(e.target.value)} required className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-wash-500">
                 <option value="">Pilih PO</option>
                 {poOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
@@ -70,15 +75,18 @@ export default function DistributionForm() {
 
         {selectedPO && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Items yang Dikirim</h3>
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Items yang Disetujui</h3>
             {itemsBB.length > 0 && (
               <div className="mb-4">
                 <h4 className="text-xs font-medium text-gray-500 mb-2">Bahan Baku</h4>
                 {itemsBB.map((item, i) => (
                   <div key={i} className="flex items-center gap-3 mb-2 p-3 bg-gray-50 rounded-lg">
                     <span className="flex-1 text-sm font-medium">{item.nama}</span>
-                    <span className="text-xs text-gray-500">Disetujui: {item.jumlah_disetujui}</span>
-                    <input type="number" value={item.jumlah_kirim} onChange={(e) => { const n = [...itemsBB]; n[i].jumlah_kirim = e.target.value; setItemsBB(n); }} className="w-24 px-2 py-1 text-sm border border-gray-300 rounded-lg" step="any" />
+                    <span className="text-xs text-gray-500">Disetujui: {formatQty(item.qty_disetujui)}</span>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-gray-500">Kirim:</label>
+                      <input type="number" value={item.jumlah_kirim} onChange={(e) => { const n = [...itemsBB]; n[i].jumlah_kirim = e.target.value; setItemsBB(n); }} className="w-24 px-2 py-1 text-sm border border-gray-300 rounded-lg" step="any" min="0" max={item.qty_disetujui} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -89,8 +97,11 @@ export default function DistributionForm() {
                 {itemsMesin.map((item, i) => (
                   <div key={i} className="flex items-center gap-3 mb-2 p-3 bg-gray-50 rounded-lg">
                     <span className="flex-1 text-sm font-medium">{item.nama}</span>
-                    <span className="text-xs text-gray-500">Disetujui: {item.jumlah_disetujui}</span>
-                    <input type="number" value={item.jumlah_kirim} onChange={(e) => { const n = [...itemsMesin]; n[i].jumlah_kirim = e.target.value; setItemsMesin(n); }} className="w-24 px-2 py-1 text-sm border border-gray-300 rounded-lg" />
+                    <span className="text-xs text-gray-500">Disetujui: {item.qty_disetujui}</span>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-gray-500">Kirim:</label>
+                      <input type="number" value={item.jumlah_kirim} onChange={(e) => { const n = [...itemsMesin]; n[i].jumlah_kirim = e.target.value; setItemsMesin(n); }} className="w-24 px-2 py-1 text-sm border border-gray-300 rounded-lg" min="0" max={item.qty_disetujui} />
+                    </div>
                   </div>
                 ))}
               </div>

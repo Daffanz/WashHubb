@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { getReceipts } from '../../api/receipts';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable from '../../components/ui/DataTable';
+import StatusBadge from '../../components/ui/StatusBadge';
 import { formatRupiah, formatDate } from '../../utils/format';
 
 export default function ReceiptList() {
@@ -14,7 +14,7 @@ export default function ReceiptList() {
 
   const fetchData = useCallback(async (p = page) => {
     setLoading(true);
-    try { const res = await getReceipts({ page: p }); setData(res.data.data); setMeta(res.data.meta); }
+    try { const res = await fetch(`/api/procurement/receipts?page=${p}`, { headers: { Authorization: `Bearer ${localStorage.getItem('washhub_token')}` } }); const d = await res.json(); setData(d.data); setMeta(d.meta); }
     catch { toast.error('Gagal memuat data'); }
     setLoading(false);
   }, [page]);
@@ -22,9 +22,12 @@ export default function ReceiptList() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const columns = [
+    { label: 'Nomor', render: (r) => <span className="font-mono font-medium text-wash-800">{r.nomor_penerimaan}</span> },
     { label: 'Distribusi', render: (r) => r.distribusi_barang?.nomor_distribusi || '-' },
-    { label: 'Tanggal Terima', render: (r) => formatDate(r.tanggal_terima) },
-    { label: 'Total Bayar', render: (r) => <span className="font-medium">{formatRupiah(r.total_bayar)}</span> },
+    { label: 'PO', render: (r) => r.distribusi_barang?.po?.nomor_po || '-' },
+    { label: 'Tanggal', render: (r) => formatDate(r.tanggal_terima) },
+    { label: 'Total', render: (r) => <span className="font-medium">{formatRupiah(r.total_bayar)}</span> },
+    { label: 'Status', render: (r) => <StatusBadge status={r.status?.label} color={r.status?.kode === 'selesai' ? 'green' : r.status?.kode === 'menunggu_retur' ? 'amber' : 'gray'} /> },
   ];
 
   return (

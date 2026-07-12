@@ -13,6 +13,8 @@ import RoleList from './pages/roles/RoleList';
 import RoleForm from './pages/roles/RoleForm';
 import SupplierList from './pages/suppliers/SupplierList';
 import SupplierForm from './pages/suppliers/SupplierForm';
+import SupplierStockPage from './pages/suppliers/SupplierStockPage';
+import SupplierStockDetail from './pages/suppliers/SupplierStockDetail';
 
 // Module 2
 import CategoryList from './pages/master/categories/CategoryList';
@@ -36,6 +38,8 @@ import ReceiptList from './pages/procurement/ReceiptList';
 import ReceiptForm from './pages/procurement/ReceiptForm';
 import ReceiptDetail from './pages/procurement/ReceiptDetail';
 import ReturnList from './pages/procurement/ReturnList';
+import ReturnForm from './pages/procurement/ReturnForm';
+import ReturnDetail from './pages/procurement/ReturnDetail';
 
 // Module 4
 import StockList from './pages/inventory/StockList';
@@ -68,6 +72,8 @@ export default function App() {
         <Route path="suppliers" element={<SupplierList />} />
         <Route path="suppliers/create" element={<SupplierForm />} />
         <Route path="suppliers/:id/edit" element={<SupplierForm />} />
+        <Route path="suppliers/stock" element={<SupplierStockPage />} />
+        <Route path="suppliers/stock/:id" element={<SupplierStockDetail />} />
         {/* Module 2 */}
         <Route path="master/categories" element={<CategoryList />} />
         <Route path="master/categories/create" element={<CategoryForm />} />
@@ -94,6 +100,8 @@ export default function App() {
         <Route path="procurement/receipts/create" element={<ReceiptForm />} />
         <Route path="procurement/receipts/:id" element={<ReceiptDetail />} />
         <Route path="procurement/returns" element={<ReturnList />} />
+        <Route path="procurement/returns/create" element={<ReturnForm />} />
+        <Route path="procurement/returns/:id" element={<ReturnDetail />} />
         {/* Module 4 */}
         <Route path="inventory/stocks" element={<StockList />} />
         <Route path="inventory/stocks/:type/:id" element={<StockDetail />} />

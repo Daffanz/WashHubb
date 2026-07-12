@@ -45,6 +45,8 @@ return new class extends Migration
             $table->decimal('diskon', 12, 2)->default(0);
             $table->decimal('ppn', 12, 2)->default(0);
             $table->decimal('total_bayar', 14, 2)->default(0);
+            $table->unsignedBigInteger('status_id')->nullable();
+            $table->foreign('status_id')->references('id')->on('statuses')->nullOnDelete();
             $table->timestamps();
         });
 
