@@ -62,6 +62,10 @@ class UserController extends Controller
 
     public function destroy(User $user): JsonResponse
     {
+        if ($user->role?->kode === 'admin_it') {
+            return response()->json(['message' => 'User dengan role Admin IT tidak dapat dihapus.'], 403);
+        }
+
         $user->tokens()->delete();
         $user->delete();
         return response()->json(['message' => 'User berhasil dihapus.']);

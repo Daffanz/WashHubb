@@ -3,23 +3,30 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
     public function login(LoginRequest $request): JsonResponse
     {
-        if (! auth()->attempt($request->only('email', 'password'))) {
-            return response()->json(['message' => 'Kredensial tidak valid.'], 401);
+        $user = User::where('email', $request->email)->first();
+
+        if (! $user) {
+            return response()->json(['message' => 'Email tidak terdaftar.'], 401);
         }
 
-        $user = auth()->user();
+        if (! Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'Password salah.'], 401);
+        }
 
         if ($user->status?->kode === 'nonaktif') {
-            auth()->logout();
             return response()->json(['message' => 'Akun Anda nonaktif.'], 403);
         }
+
+        auth()->login($user);
 
         $token = $user->createToken('api-token')->plainTextToken;
 

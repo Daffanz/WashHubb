@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 
 const menuItems = [
-  { label: 'Dashboard', to: '/dashboard', permission: 'user-list', group: 'Umum' },
+  { label: 'Dashboard', to: '/dashboard', group: 'Umum' },
   { label: 'Users', to: '/users', permission: 'user-list', group: 'Akun' },
   { label: 'Roles', to: '/roles', permission: 'role-list', group: 'Akun' },
   { label: 'Suppliers', to: '/suppliers', permission: 'supplier-list', group: 'Akun' },
@@ -40,7 +40,7 @@ export default function Sidebar({ onClose }) {
   const { user } = useAuth();
   const perms = user?.permissions || [];
 
-  const visibleItems = menuItems.filter((item) => perms.includes(item.permission));
+  const visibleItems = menuItems.filter((item) => !item.permission || perms.includes(item.permission));
 
   const groups = {};
   visibleItems.forEach((item) => {
@@ -50,12 +50,7 @@ export default function Sidebar({ onClose }) {
 
   return (
     <div className="flex flex-col h-full bg-wash-900 text-white">
-      <div className="flex items-center gap-3 px-6 py-5 border-b border-wash-800">
-        <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center">
-          <svg className="w-6 h-6 text-wash-900" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17a1 1 0 001 1h6a1 1 0 001-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7zm2 14h-4v-1h4v1zm0-2h-4v-1h4v1zm1.15-4.95L14 11.12V15h-4v-3.88l-1.15-1.07A4.993 4.993 0 017 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.05z" />
-          </svg>
-        </div>
+      <div className="flex items-center px-6 py-5 border-b border-wash-800">
         <span className="text-lg font-bold tracking-tight">WashHub</span>
         <button onClick={onClose} className="ml-auto lg:hidden p-1 rounded-md hover:bg-wash-800 transition">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
