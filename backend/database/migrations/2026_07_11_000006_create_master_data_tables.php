@@ -48,6 +48,7 @@ return new class extends Migration
             $table->string('merk')->nullable();
             $table->string('tipe')->nullable();
             $table->integer('kapasitas')->nullable();
+            $table->decimal('harga_standar', 12, 2)->default(0);
             $table->foreignId('status_id')->nullable()->constrained('statuses')->nullOnDelete();
             $table->timestamps();
         });

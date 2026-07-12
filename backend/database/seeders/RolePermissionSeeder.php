@@ -72,7 +72,7 @@ class RolePermissionSeeder extends Seeder
             ['kode' => 'retur-validate', 'nama' => 'Validasi Retur', 'modul' => 'pengadaan'],
             ['kode' => 'stock-list', 'nama' => 'Lihat Stok', 'modul' => 'inventory'],
             ['kode' => 'stock-view', 'nama' => 'Detail Stok', 'modul' => 'inventory'],
-            ['kode' => 'stock-manage', 'nama' => 'Kelola Stok', 'modul' => 'inventory'],
+            ['kode' => 'supplier-stock-manage', 'nama' => 'Kelola Stok Supplier', 'modul' => 'supplier'],
             ['kode' => 'mutation-list', 'nama' => 'Lihat Mutasi', 'modul' => 'inventory'],
             ['kode' => 'mutation-create', 'nama' => 'Buat Mutasi', 'modul' => 'inventory'],
             ['kode' => 'outlet-list', 'nama' => 'Lihat Outlet', 'modul' => 'outlet'],
@@ -101,7 +101,7 @@ class RolePermissionSeeder extends Seeder
         $procurement->permissions()->sync(Permission::whereIn('kode', [
             'supplier-list', 'supplier-create', 'supplier-edit',
             'po-list', 'po-create', 'po-edit', 'po-delete', 'po-kirim',
-            'distribution-list', 'distribution-create',
+            'distribution-list',
             'receipt-list', 'receipt-create',
             'retur-list', 'retur-create', 'retur-validate',
             'stock-list', 'stock-view',
@@ -112,8 +112,8 @@ class RolePermissionSeeder extends Seeder
         $supplier->permissions()->sync(Permission::whereIn('kode', [
             'po-list', 'po-validate',
             'distribution-list', 'distribution-create',
-            'stock-list', 'stock-view', 'stock-manage',
-            'mutation-list', 'mutation-create',
+            'supplier-stock-manage',
+            'retur-list',
         ])->pluck('id'));
 
         $managerOutlet = Role::where('kode', 'manager_outlet')->first();

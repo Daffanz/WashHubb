@@ -97,27 +97,33 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('permission:po-list')->get('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show']);
         Route::middleware('permission:po-edit')->put('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update']);
         Route::middleware('permission:po-delete')->delete('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'destroy']);
+        // UC-30: Kirim PO ke Supplier
         Route::middleware('permission:po-kirim')->patch('/purchase-orders/{purchaseOrder}/kirim', [PurchaseOrderController::class, 'kirim']);
-        Route::middleware('permission:po-validate')->patch('/purchase-orders/{purchaseOrder}/validate', [PurchaseOrderController::class, 'validatePo']);
-        Route::middleware('permission:po-validate')->patch('/purchase-orders/{purchaseOrder}/items/{itemId}/validate', [PurchaseOrderController::class, 'validateItem']);
+        // UC-31: Supplier validasi per-item
+        Route::middleware('permission:po-validate')->patch('/purchase-orders/{purchaseOrder}/validate', [PurchaseOrderController::class, 'validate']);
 
-        // Supplier Stock
-        Route::get('/supplier-stocks', [SupplierStockController::class, 'index']);
-        Route::post('/supplier-stocks', [SupplierStockController::class, 'store']);
-        Route::delete('/supplier-stocks/{id}', [SupplierStockController::class, 'destroy']);
+        // Supplier Stock (UC-39/40)
+        Route::middleware('permission:supplier-stock-manage')->get('/supplier-stocks', [SupplierStockController::class, 'index']);
+        Route::middleware('permission:supplier-stock-manage')->get('/supplier-stocks/{id}', [SupplierStockController::class, 'show']);
+        Route::middleware('permission:supplier-stock-manage')->post('/supplier-stocks', [SupplierStockController::class, 'store']);
+        Route::middleware('permission:supplier-stock-manage')->delete('/supplier-stocks/{id}', [SupplierStockController::class, 'destroy']);
 
+        // UC-35/36: Distribusi
         Route::middleware('permission:distribution-list')->get('/distributions', [DistribusiController::class, 'index']);
         Route::middleware('permission:distribution-create')->post('/distributions', [DistribusiController::class, 'store']);
         Route::middleware('permission:distribution-list')->get('/distributions/{distribusi}', [DistribusiController::class, 'show']);
+        Route::middleware('permission:receipt-create')->patch('/distributions/{distribusi}/diterima', [DistribusiController::class, 'diterima']);
 
+        // UC-34: Penerimaan
         Route::middleware('permission:receipt-list')->get('/receipts', [PenerimaanController::class, 'index']);
         Route::middleware('permission:receipt-create')->post('/receipts', [PenerimaanController::class, 'store']);
         Route::middleware('permission:receipt-list')->get('/receipts/{penerimaan}', [PenerimaanController::class, 'show']);
 
-        // Retur
+        // UC-37/38: Retur
         Route::middleware('permission:retur-list')->get('/returns', [ReturController::class, 'index']);
         Route::middleware('permission:retur-create')->post('/returns', [ReturController::class, 'store']);
         Route::middleware('permission:retur-list')->get('/returns/{retur}', [ReturController::class, 'show']);
+        Route::middleware('permission:retur-list')->patch('/returns/{retur}/kirim-pengganti', [ReturController::class, 'kirimPengganti']);
         Route::middleware('permission:retur-validate')->patch('/returns/{retur}/confirm', [ReturController::class, 'confirm']);
     });
 
@@ -125,7 +131,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('inventory')->group(function () {
         Route::middleware('permission:stock-list')->get('/stocks', [StockController::class, 'index']);
         Route::middleware('permission:stock-view')->get('/stocks/{type}/{id}', [StockController::class, 'show']);
-        Route::middleware('permission:stock-manage')->post('/stocks', [StockController::class, 'store']);
 
         Route::middleware('permission:mutation-list')->get('/mutations', [MutasiController::class, 'index']);
         Route::middleware('permission:mutation-create')->post('/mutations', [MutasiController::class, 'store']);

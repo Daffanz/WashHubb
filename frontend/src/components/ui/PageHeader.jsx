@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-export default function PageHeader({ title, breadcrumbs = [], actionLabel, actionTo }) {
+export default function PageHeader({ title, breadcrumbs = [], actionLabel, actionTo, actionOnClick }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
       <div>
@@ -21,16 +21,28 @@ export default function PageHeader({ title, breadcrumbs = [], actionLabel, actio
           </nav>
         )}
       </div>
-      {actionLabel && actionTo && (
-        <Link
-          to={actionTo}
-          className="inline-flex items-center gap-2 bg-wash-900 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-wash-800 transition shadow-sm"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          {actionLabel}
-        </Link>
+      {actionLabel && (actionTo || actionOnClick) && (
+        actionTo ? (
+          <Link
+            to={actionTo}
+            className="inline-flex items-center gap-2 bg-wash-900 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-wash-800 transition shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            {actionLabel}
+          </Link>
+        ) : (
+          <button
+            onClick={actionOnClick}
+            className="inline-flex items-center gap-2 bg-wash-900 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-wash-800 transition shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            {actionLabel}
+          </button>
+        )
       )}
     </div>
   );

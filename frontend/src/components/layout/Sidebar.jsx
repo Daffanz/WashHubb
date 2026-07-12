@@ -7,6 +7,7 @@ const menuItems = [
   { label: 'Users', to: '/users', permission: 'user-list', group: 'Akun' },
   { label: 'Roles', to: '/roles', permission: 'role-list', group: 'Akun' },
   { label: 'Suppliers', to: '/suppliers', permission: 'supplier-list', group: 'Akun' },
+  { label: 'Stok Supplier', to: '/suppliers/stock', permission: 'supplier-stock-manage', group: 'Stok Supplier' },
   { label: 'Categories', to: '/master/categories', permission: 'category-list', group: 'Data Master' },
   { label: 'Materials', to: '/master/materials', permission: 'material-list', group: 'Data Master' },
   { label: 'Services', to: '/master/services', permission: 'service-list', group: 'Data Master' },
@@ -15,8 +16,8 @@ const menuItems = [
   { label: 'Distributions', to: '/procurement/distributions', permission: 'distribution-list', group: 'Pengadaan' },
   { label: 'Receipts', to: '/procurement/receipts', permission: 'receipt-list', group: 'Pengadaan' },
   { label: 'Returns', to: '/procurement/returns', permission: 'retur-list', group: 'Pengadaan' },
-  { label: 'Stocks', to: '/inventory/stocks', permission: 'stock-list', group: 'Inventory' },
-  { label: 'Mutations', to: '/inventory/mutations', permission: 'mutation-list', group: 'Inventory' },
+  { label: 'Stok Perusahaan', to: '/inventory/stocks', permission: 'stock-list', group: 'Inventory' },
+  { label: 'Mutasi Barang', to: '/inventory/mutations', permission: 'mutation-list', group: 'Inventory' },
 ];
 
 const iconMap = {
