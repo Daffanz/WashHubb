@@ -3,36 +3,43 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 
 const menuItems = [
+  // Umum — semua role
   { label: 'Dashboard', to: '/dashboard', group: 'Umum' },
+
+  // Akun — admin_it only (permission-based)
   { label: 'Users', to: '/users', permission: 'user-list', group: 'Akun' },
   { label: 'Roles', to: '/roles', permission: 'role-list', group: 'Akun' },
   { label: 'Suppliers', to: '/suppliers', permission: 'supplier-list', group: 'Akun' },
   { label: 'Stok Supplier', to: '/suppliers/stock', permission: 'supplier-stock-manage', group: 'Stok Supplier' },
+
+  // Data Master — admin_it, franchisor (permission-based)
   { label: 'Categories', to: '/master/categories', permission: 'category-list', group: 'Data Master' },
   { label: 'Materials', to: '/master/materials', permission: 'material-list', group: 'Data Master' },
   { label: 'Services', to: '/master/services', permission: 'service-list', group: 'Data Master' },
   { label: 'Machines', to: '/master/machines', permission: 'machine-list', group: 'Data Master' },
+
+  // Pengadaan — admin_it, procurement, supplier, franchisor
   { label: 'Purchase Orders', to: '/procurement/purchase-orders', permission: 'po-list', group: 'Pengadaan' },
   { label: 'Distributions', to: '/procurement/distributions', permission: 'distribution-list', group: 'Pengadaan' },
   { label: 'Receipts', to: '/procurement/receipts', permission: 'receipt-list', group: 'Pengadaan' },
   { label: 'Returns', to: '/procurement/returns', permission: 'retur-list', group: 'Pengadaan' },
+  { label: 'Distribusi Outlet', to: '/operasional/distribusi-outlet', roles: ['admin_it', 'procurement', 'franchisor'], group: 'Pengadaan' },
+
+  // Inventory — admin_it, procurement, supplier, manager_outlet
   { label: 'Stok Perusahaan', to: '/inventory/stocks', permission: 'stock-list', group: 'Inventory' },
+  { label: 'Stok Outlet', to: '/inventory/stok-outlet', roles: ['admin_it', 'manager_outlet', 'franchisor', 'franchise', 'procurement'], group: 'Inventory' },
   { label: 'Mutasi Barang', to: '/inventory/mutations', permission: 'mutation-list', group: 'Inventory' },
-  // Modul 5 — Operasional
-  { label: 'Orders', to: '/operasional/orders', group: 'Operasional' },
-  { label: 'Permintaan Stok', to: '/operasional/permintaan-stok', group: 'Operasional' },
-  { label: 'Distribusi Outlet', to: '/operasional/distribusi-outlet', group: 'Operasional' },
-  { label: 'Jadwal Service', to: '/operasional/jadwal-service', group: 'Operasional' },
-  { label: 'Jadwal Shift', to: '/operasional/jadwal-shift', group: 'Operasional' },
-  // Modul 6 — Franchise
-  { label: 'Outlets', to: '/franchise/outlets', group: 'Franchise' },
-  { label: 'Loyalti', to: '/franchise/loyalti', group: 'Franchise' },
-  // Modul 7 — Dashboard
-  { label: 'Dashboard Franchisor', to: '/dashboard/franchisor', group: 'Dashboard' },
-  { label: 'Dashboard Pengadaan', to: '/dashboard/pengadaan', group: 'Dashboard' },
-  { label: 'Dashboard Supplier', to: '/dashboard/supplier', group: 'Dashboard' },
-  { label: 'Dashboard Franchisee', to: '/dashboard/franchisee', group: 'Dashboard' },
-  { label: 'Dashboard Outlet', to: '/dashboard/manajer-outlet', group: 'Dashboard' },
+
+  // Operasional — admin_it, manager_outlet, franchisor, franchise, procurement (view only)
+  { label: 'Orders', to: '/operasional/orders', roles: ['admin_it', 'manager_outlet', 'franchisor', 'franchise'], group: 'Operasional' },
+  { label: 'Permintaan Stok', to: '/operasional/permintaan-stok', roles: ['admin_it', 'manager_outlet', 'franchisor', 'franchise', 'procurement'], group: 'Operasional' },
+  { label: 'Penerimaan Stok Outlet', to: '/operasional/penerimaan-stok-outlet', roles: ['admin_it', 'manager_outlet', 'franchisor', 'franchise'], group: 'Operasional' },
+  { label: 'Jadwal Service', to: '/operasional/jadwal-service', roles: ['admin_it', 'manager_outlet', 'franchisor', 'franchise'], group: 'Operasional' },
+  { label: 'Jadwal Shift', to: '/operasional/jadwal-shift', roles: ['admin_it', 'manager_outlet', 'franchisor', 'franchise'], group: 'Operasional' },
+
+  // Franchise — admin_it, franchisor, franchise
+  { label: 'Outlets', to: '/franchise/outlets', roles: ['admin_it', 'franchisor', 'franchise'], group: 'Franchise' },
+  { label: 'Loyalti', to: '/franchise/loyalti', roles: ['admin_it', 'franchisor', 'franchise'], group: 'Franchise' },
 ];
 
 const iconMap = {
@@ -55,20 +62,23 @@ const iconMap = {
   'Distribusi Outlet': <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0H21a.75.75 0 00.75-.75V11.25a3 3 0 00-3-3h-1.5l-1.72-4.575A1.5 1.5 0 0014.87 2.25H9.13a1.5 1.5 0 00-1.43 1.05L6 7.5H3.75a3 3 0 00-3 3v7.125c0 .621.504 1.125 1.125 1.125h14.25" /></svg>,
   'Jadwal Service': <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.42 15.17l-5.384 3.09a.75.75 0 01-1.06-.78l.94-6.02a.75.75 0 00-.27-.79L2.25 8.25m9.17 6.92l5.384 3.09a.75.75 0 001.06-.78l-.94-6.02a.75.75 0 00.27-.79l2.18-3.13" /></svg>,
   'Jadwal Shift': <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  'Penerimaan Stok Outlet': <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m16.5 0V12a2.25 2.25 0 01-2.25 2.25h-3m-11.25 0V12a2.25 2.25 0 012.25-2.25h3m0 0V3.75a.75.75 0 01.75-.75h4.5a.75.75 0 01.75.75V7.5m-6 3h6" /></svg>,
   Outlets: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3H21" /></svg>,
+  'Stok Outlet': <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>,
   Loyalti: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>,
-  'Dashboard Franchisor': <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5m.75-9l3-3 2.148 2.148A12.061 12.061 0 0116.5 7.605" /></svg>,
-  'Dashboard Pengadaan': <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>,
-  'Dashboard Supplier': <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0H21a.75.75 0 00.75-.75V11.25a3 3 0 00-3-3h-1.5l-1.72-4.575A1.5 1.5 0 0014.87 2.25H9.13a1.5 1.5 0 00-1.43 1.05L6 7.5H3.75a3 3 0 00-3 3v7.125c0 .621.504 1.125 1.125 1.125h14.25" /></svg>,
-  'Dashboard Franchisee': <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3H21" /></svg>,
-  'Dashboard Outlet': <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25a2.25 2.25 0 01-2.25-2.25v-2.25z" /></svg>,
 };
 
 export default function Sidebar({ onClose }) {
   const { user } = useAuth();
   const perms = user?.permissions || [];
 
-  const visibleItems = menuItems.filter((item) => !item.permission || perms.includes(item.permission));
+  const visibleItems = menuItems.filter((item) => {
+    if (item.permission && !perms.includes(item.permission)) return false;
+    if (item.roles && !item.roles.includes(user?.role?.kode)) return false;
+    // Hide Data Master group for supplier role
+    if (item.group === 'Data Master' && user?.role?.kode === 'supplier') return false;
+    return true;
+  });
 
   const groups = {};
   visibleItems.forEach((item) => {

@@ -256,6 +256,59 @@ class SupplierStockController extends Controller
     }
 
     /**
+     * Supplier tambah stok ke item yang sudah ada
+     */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $supplier = $request->user()->suppliers()->first();
+        if (! $supplier) return response()->json(['message' => 'Anda bukan supplier.'], 403);
+
+        $request->validate([
+            'jumlah' => 'required|numeric|min:1',
+        ]);
+
+        if ($supplier->jenis_supplier === 'bahan_baku') {
+            $stok = StokSupplierBahanBaku::where('supplier_id', $supplier->id)->where('id', $id)->first();
+            if (! $stok) return response()->json(['message' => 'Stok tidak ditemukan.'], 404);
+
+            DB::transaction(function () use ($stok, $request) {
+                $stok->increment('stok_saat_ini', $request->jumlah);
+                MutasiStokSupplierBahanBaku::create([
+                    'stok_supplier_bahan_baku_id' => $stok->id,
+                    'jenis_mutasi' => 'masuk',
+                    'jumlah' => $request->jumlah,
+                    'tanggal' => now(),
+                ]);
+            });
+
+            $stok->refresh();
+            return response()->json([
+                'message' => 'Stok berhasil ditambahkan.',
+                'data' => $this->formatStok($stok->load('bahanBaku.kategori', 'status'), 'bahan_baku'),
+            ]);
+        }
+
+        $stok = StokSupplierMesin::where('supplier_id', $supplier->id)->where('id', $id)->first();
+        if (! $stok) return response()->json(['message' => 'Stok tidak ditemukan.'], 404);
+
+        DB::transaction(function () use ($stok, $request) {
+            $stok->increment('stok_saat_ini', (int) $request->jumlah);
+            MutasiStokSupplierMesin::create([
+                'stok_supplier_mesin_id' => $stok->id,
+                'jenis_mutasi' => 'masuk',
+                'jumlah' => (int) $request->jumlah,
+                'tanggal' => now(),
+            ]);
+        });
+
+        $stok->refresh();
+        return response()->json([
+            'message' => 'Stok berhasil ditambahkan.',
+            'data' => $this->formatStok($stok->load('mesin', 'status'), 'mesin'),
+        ]);
+    }
+
+    /**
      * UC-40: Supplier hapus stok (hanya jika belum pernah didistribusikan)
      */
     public function destroy(Request $request, int $id): JsonResponse

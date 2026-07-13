@@ -75,7 +75,8 @@ export default function PermintaanDetail() {
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead><tr className="border-b">
-                <th className="text-left py-2 text-gray-500">Bahan Baku</th>
+                <th className="text-left py-2 text-gray-500">Tipe</th>
+                <th className="text-left py-2 text-gray-500">Item</th>
                 <th className="text-right py-2 text-gray-500">Diminta</th>
                 <th className="text-right py-2 text-gray-500">Disetujui</th>
                 <th className="text-center py-2 text-gray-500">Status</th>
@@ -84,9 +85,15 @@ export default function PermintaanDetail() {
               <tbody>
                 {permintaan.details?.map((d) => {
                   const dec = decisions[d.id] || {};
+                  const itemName = d.tipe_item === 'mesin' ? d.mesin?.nama : d.bahan_baku?.nama;
                   return (
                     <tr key={d.id} className="border-b last:border-0">
-                      <td className="py-2 font-medium">{d.bahan_baku?.nama || '-'}</td>
+                      <td className="py-2">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${d.tipe_item === 'mesin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
+                          {d.tipe_item === 'mesin' ? 'Mesin' : 'Bahan Baku'}
+                        </span>
+                      </td>
+                      <td className="py-2 font-medium">{itemName || '-'}</td>
                       <td className="py-2 text-right">{formatQty(d.jumlah_diminta)}</td>
                       <td className="py-2 text-right">{d.jumlah_disetujui !== null ? formatQty(d.jumlah_disetujui) : '-'}</td>
                       <td className="py-2 text-center"><StatusBadge status={d.status?.label || 'Diajukan'} color={{ diajukan: 'yellow', disetujui: 'green', disetujui_sebagian: 'amber', ditolak: 'red' }[d.status?.kode] || 'yellow'} /></td>

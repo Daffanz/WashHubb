@@ -28,8 +28,11 @@ export default function ShiftList() {
     { label: 'Minggu Mulai', render: (r) => formatDate(r.minggu_mulai) },
     { label: 'Staf', render: (r) => <span className="text-sm text-gray-500">{r.details?.length || 0} shift</span> },
     { label: 'Status', render: (r) => {
-      const colors = { belum_berjalan: 'gray', berjalan: 'blue', selesai: 'green' };
-      return <StatusBadge status={r.status?.label} color={colors[r.status?.kode] || 'gray'} />;
+      const semuaSelesai = r.details?.every((d) => d.status?.kode === 'selesai');
+      const adaYangBerjalan = r.details?.some((d) => d.status?.kode === 'berjalan');
+      const status = semuaSelesai ? 'Selesai' : adaYangBerjalan ? 'Berjalan' : 'Belum Berjalan';
+      const color = semuaSelesai ? 'green' : adaYangBerjalan ? 'blue' : 'gray';
+      return <StatusBadge status={status} color={color} />;
     }},
   ];
 
@@ -37,12 +40,15 @@ export default function ShiftList() {
     <div>
       <PageHeader title="Jadwal Shift Staf" breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Operasional' }, { label: 'Shift' }]} actionLabel="Buat Jadwal" actionTo="/operasional/jadwal-shift/create" />
       <DataTable columns={columns} data={data} loading={loading} meta={meta} onPageChange={(p) => setPage(p)}
-        actions={(row) => (
-          <div className="flex gap-2 justify-end">
-            <Link to={`/operasional/jadwal-shift/${row.id}`} className="text-sm text-wash-700 hover:text-wash-900 font-medium px-2 py-1 rounded hover:bg-wash-50 transition">Detail</Link>
-            {row.status?.kode === 'belum_berjalan' && <Link to={`/operasional/jadwal-shift/${row.id}/edit`} className="text-sm text-wash-700 hover:text-wash-900 font-medium px-2 py-1 rounded hover:bg-wash-50 transition">Edit</Link>}
-          </div>
-        )}
+        actions={(row) => {
+          const semuaBelumBerjalan = row.details?.every((d) => d.status?.kode === 'belum_berjalan');
+          return (
+            <div className="flex gap-2 justify-end">
+              <Link to={`/operasional/jadwal-shift/${row.id}`} className="text-sm text-wash-700 hover:text-wash-900 font-medium px-2 py-1 rounded hover:bg-wash-50 transition">Detail</Link>
+              {semuaBelumBerjalan && <Link to={`/operasional/jadwal-shift/${row.id}/edit`} className="text-sm text-wash-700 hover:text-wash-900 font-medium px-2 py-1 rounded hover:bg-wash-50 transition">Edit</Link>}
+            </div>
+          );
+        }}
       />
     </div>
   );

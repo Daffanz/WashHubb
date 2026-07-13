@@ -47,7 +47,7 @@ export default function UserList() {
         actions={(row) => (
           <div className="flex gap-2 justify-end">
             <Link to={`/users/${row.id}/edit`} className="text-sm text-wash-700 hover:text-wash-900 font-medium px-2 py-1 rounded hover:bg-wash-50 transition">Edit</Link>
-            {row.role?.kode !== 'admin_it' && (
+            {!['admin_it', 'franchise', 'manager_outlet'].includes(row.role?.kode) && (
               <button onClick={() => setDeleteTarget(row)} className="text-sm text-red-600 hover:text-red-800 font-medium px-2 py-1 rounded hover:bg-red-50 transition">Hapus</button>
             )}
           </div>

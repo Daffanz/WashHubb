@@ -38,9 +38,21 @@ class PermintaanStokController extends Controller
         $request->validate([
             'outlet_id' => 'required|exists:outlets,id',
             'items' => 'required|array|min:1',
-            'items.*.bahan_baku_id' => 'required|exists:bahan_bakus,id',
+            'items.*.tipe_item' => 'required|in:bahan_baku,mesin',
+            'items.*.bahan_baku_id' => 'nullable|exists:bahan_bakus,id',
+            'items.*.mesin_id' => 'nullable|exists:mesins,id',
             'items.*.jumlah_diminta' => 'required|numeric|min:0.0001',
         ]);
+
+        // Validate that the correct ID is provided based on tipe_item
+        foreach ($request->items as $index => $item) {
+            if ($item['tipe_item'] === 'bahan_baku' && empty($item['bahan_baku_id'])) {
+                return response()->json(['message' => "Item {$index}: bahan_baku_id wajib diisi untuk tipe bahan_baku."], 422);
+            }
+            if ($item['tipe_item'] === 'mesin' && empty($item['mesin_id'])) {
+                return response()->json(['message' => "Item {$index}: mesin_id wajib diisi untuk tipe mesin."], 422);
+            }
+        }
 
         $permintaan = DB::transaction(function () use ($request) {
             $diajukan = Status::where('konteks', 'permintaan_stok_outlet')->where('kode', 'diajukan')->first();
@@ -56,7 +68,9 @@ class PermintaanStokController extends Controller
             foreach ($request->items as $item) {
                 PermintaanStokOutletDetail::create([
                     'permintaan_stok_outlet_id' => $permintaan->id,
-                    'bahan_baku_id' => $item['bahan_baku_id'],
+                    'bahan_baku_id' => $item['tipe_item'] === 'bahan_baku' ? $item['bahan_baku_id'] : null,
+                    'mesin_id' => $item['tipe_item'] === 'mesin' ? $item['mesin_id'] : null,
+                    'tipe_item' => $item['tipe_item'],
                     'jumlah_diminta' => $item['jumlah_diminta'],
                     'status_id' => $detailDiajukan?->id,
                 ]);
@@ -67,13 +81,13 @@ class PermintaanStokController extends Controller
 
         return response()->json([
             'message' => 'Permintaan stok berhasil diajukan.',
-            'data' => $this->format($permintaan->fresh()->load(['outlet', 'user', 'status', 'details.bahanBaku', 'details.status'])),
+            'data' => $this->format($permintaan->fresh()->load(['outlet', 'user', 'status', 'details.bahanBaku', 'details.mesin', 'details.status'])),
         ], 201);
     }
 
     public function show(PermintaanStokOutlet $permintaan): JsonResponse
     {
-        $permintaan->load(['outlet', 'user', 'status', 'details.bahanBaku', 'details.status', 'distribusiOutlets.details.bahanBaku']);
+        $permintaan->load(['outlet', 'user', 'status', 'details.bahanBaku', 'details.mesin', 'details.status', 'distribusiOutlets.details.bahanBaku', 'distribusiOutlets.details.mesin']);
         return response()->json(['data' => $this->format($permintaan)]);
     }
 
@@ -161,7 +175,9 @@ class PermintaanStokController extends Controller
             'status' => $p->status ? ['id' => $p->status->id, 'kode' => $p->status->kode, 'label' => $p->status->label] : null,
             'details' => $p->details->map(fn ($d) => [
                 'id' => $d->id,
+                'tipe_item' => $d->tipe_item,
                 'bahan_baku' => $d->bahanBaku ? ['id' => $d->bahanBaku->id, 'nama' => $d->bahanBaku->nama] : null,
+                'mesin' => $d->mesin ? ['id' => $d->mesin->id, 'nama' => $d->mesin->nama] : null,
                 'jumlah_diminta' => (float) $d->jumlah_diminta,
                 'jumlah_disetujui' => $d->jumlah_disetujui !== null ? (float) $d->jumlah_disetujui : null,
                 'alasan' => $d->alasan,

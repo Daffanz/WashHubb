@@ -11,6 +11,7 @@ use App\Models\BahanBaku;
 use App\Models\JenisLayanan;
 use App\Models\JenisLayananBahanBaku;
 use App\Models\Mesin;
+use App\Models\Franchise;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -56,6 +57,32 @@ class TestDataSeeder extends Seeder
             'no_telp' => '085555555555', 'role_id' => Role::where('kode', 'manager_outlet')->first()->id,
             'status_id' => $aktifStatus?->id,
         ]);
+
+        // ==========================================
+        // FRANCHISE USERS — 3 franchise
+        // ==========================================
+        $franchiseRole = Role::where('kode', 'franchise')->first();
+
+        $franchise1 = User::firstOrCreate(['email' => 'franchise1@washhub.com'], [
+            'nama' => 'Franchise Bandung', 'password' => Hash::make('password'),
+            'no_telp' => '086666666661', 'role_id' => $franchiseRole->id,
+            'status_id' => $aktifStatus?->id,
+        ]);
+        Franchise::firstOrCreate(['user_id' => $franchise1->id]);
+
+        $franchise2 = User::firstOrCreate(['email' => 'franchise2@washhub.com'], [
+            'nama' => 'Franchise Surabaya', 'password' => Hash::make('password'),
+            'no_telp' => '086666666662', 'role_id' => $franchiseRole->id,
+            'status_id' => $aktifStatus?->id,
+        ]);
+        Franchise::firstOrCreate(['user_id' => $franchise2->id]);
+
+        $franchise3 = User::firstOrCreate(['email' => 'franchise3@washhub.com'], [
+            'nama' => 'Franchise Jakarta', 'password' => Hash::make('password'),
+            'no_telp' => '086666666663', 'role_id' => $franchiseRole->id,
+            'status_id' => $aktifStatus?->id,
+        ]);
+        Franchise::firstOrCreate(['user_id' => $franchise3->id]);
 
         // ==========================================
         // SUPPLIER PROFILES

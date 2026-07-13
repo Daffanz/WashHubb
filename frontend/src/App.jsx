@@ -57,6 +57,9 @@ import PermintaanDetail from './pages/operasional/permintaan/PermintaanDetail';
 import DistribusiOutletList from './pages/operasional/distribusi/DistribusiList';
 import DistribusiOutletForm from './pages/operasional/distribusi/DistribusiForm';
 import DistribusiOutletDetail from './pages/operasional/distribusi/DistribusiDetail';
+import PenerimaanStokOutletList from './pages/operasional/penerimaan/PenerimaanList';
+import PenerimaanStokOutletDetail from './pages/operasional/penerimaan/PenerimaanDetail';
+import PenerimaanOutletForm from './pages/operasional/penerimaan/PenerimaanOutletForm';
 import JadwalServiceList from './pages/operasional/service/ServiceList';
 import JadwalServiceForm from './pages/operasional/service/ServiceForm';
 import JadwalServiceDetail from './pages/operasional/service/ServiceDetail';
@@ -68,16 +71,12 @@ import ShiftDetail from './pages/operasional/shift/ShiftDetail';
 import OutletList from './pages/franchise/outlets/OutletList';
 import OutletForm from './pages/franchise/outlets/OutletForm';
 import OutletDetail from './pages/franchise/outlets/OutletDetail';
+import StokOutlet from './pages/inventory/StokOutlet';
+import StokOutletList from './pages/inventory/StokOutletList';
 import LoyaltiList from './pages/franchise/loyalti/LoyaltiList';
 import LoyaltiForm from './pages/franchise/loyalti/LoyaltiForm';
 import LoyaltiDetail from './pages/franchise/loyalti/LoyaltiDetail';
 
-// Module 7 — Dashboard
-import FranchisorDashboard from './pages/dashboard/FranchisorDashboard';
-import PengadaanDashboard from './pages/dashboard/PengadaanDashboard';
-import SupplierDashboard from './pages/dashboard/SupplierDashboard';
-import FranchiseeDashboard from './pages/dashboard/FranchiseeDashboard';
-import ManajerOutletDashboard from './pages/dashboard/ManajerOutletDashboard';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -137,6 +136,7 @@ export default function App() {
         {/* Module 4 */}
         <Route path="inventory/stocks" element={<StockList />} />
         <Route path="inventory/stocks/:type/:id" element={<StockDetail />} />
+        <Route path="inventory/stok-outlet" element={<StokOutletList />} />
         <Route path="inventory/mutations" element={<MutationList />} />
         <Route path="inventory/mutations/create" element={<MutationForm />} />
         {/* Module 5 — Operasional */}
@@ -149,6 +149,9 @@ export default function App() {
         <Route path="operasional/distribusi-outlet" element={<DistribusiOutletList />} />
         <Route path="operasional/distribusi-outlet/create" element={<DistribusiOutletForm />} />
         <Route path="operasional/distribusi-outlet/:id" element={<DistribusiOutletDetail />} />
+        <Route path="operasional/penerimaan-stok-outlet" element={<PenerimaanStokOutletList />} />
+        <Route path="operasional/penerimaan-stok-outlet/create" element={<PenerimaanOutletForm />} />
+        <Route path="operasional/penerimaan-stok-outlet/:id" element={<PenerimaanStokOutletDetail />} />
         <Route path="operasional/jadwal-service" element={<JadwalServiceList />} />
         <Route path="operasional/jadwal-service/create" element={<JadwalServiceForm />} />
         <Route path="operasional/jadwal-service/:id" element={<JadwalServiceDetail />} />
@@ -161,15 +164,10 @@ export default function App() {
         <Route path="franchise/outlets/create" element={<OutletForm />} />
         <Route path="franchise/outlets/:id/edit" element={<OutletForm />} />
         <Route path="franchise/outlets/:id" element={<OutletDetail />} />
+        <Route path="franchise/outlets/:id/stok" element={<StokOutlet />} />
         <Route path="franchise/loyalti" element={<LoyaltiList />} />
         <Route path="franchise/loyalti/create" element={<LoyaltiForm />} />
         <Route path="franchise/loyalti/:id" element={<LoyaltiDetail />} />
-        {/* Module 7 — Dashboard */}
-        <Route path="dashboard/franchisor" element={<FranchisorDashboard />} />
-        <Route path="dashboard/pengadaan" element={<PengadaanDashboard />} />
-        <Route path="dashboard/supplier" element={<SupplierDashboard />} />
-        <Route path="dashboard/franchisee" element={<FranchiseeDashboard />} />
-        <Route path="dashboard/manajer-outlet" element={<ManajerOutletDashboard />} />
       </Route>
     </Routes>
   );

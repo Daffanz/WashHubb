@@ -55,8 +55,8 @@ export default function ServiceDetail() {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
           <h3 className="text-sm font-semibold text-gray-900 mb-4">Info Service</h3>
           <dl className="space-y-3 text-sm">
-            <div className="flex justify-between"><dt className="text-gray-500">Mesin</dt><dd className="font-medium">{jadwal.detail_mesin?.mesin || '-'}</dd></div>
-            <div className="flex justify-between"><dt className="text-gray-500">No. Seri</dt><dd>{jadwal.detail_mesin?.nomor_seri || '-'}</dd></div>
+            <div className="flex justify-between"><dt className="text-gray-500">Mesin</dt><dd className="font-medium">{jadwal.mesin?.nama || '-'}</dd></div>
+            <div className="flex justify-between"><dt className="text-gray-500">Kode Mesin</dt><dd>{jadwal.mesin?.kode_mesin || '-'}</dd></div>
             <div className="flex justify-between"><dt className="text-gray-500">Outlet</dt><dd>{jadwal.outlet?.nama || '-'}</dd></div>
             <div className="flex justify-between"><dt className="text-gray-500">Diajukan Oleh</dt><dd>{jadwal.user?.nama || '-'}</dd></div>
             <div className="flex justify-between"><dt className="text-gray-500">Tanggal Pengajuan</dt><dd>{formatDate(jadwal.tanggal_pengajuan)}</dd></div>

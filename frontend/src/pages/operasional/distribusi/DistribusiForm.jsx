@@ -2,41 +2,71 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { createDistribusi } from '../../../api/distribusiOutlet';
-import { getPermintaans } from '../../../api/permintaanStok';
-import { getMaterials } from '../../../api/materials';
+import { getPermintaans, getPermintaan } from '../../../api/permintaanStok';
 import PageHeader from '../../../components/ui/PageHeader';
 import FormSelect from '../../../components/ui/FormSelect';
 import FormInput from '../../../components/ui/FormInput';
 import FormActions from '../../../components/ui/FormActions';
+import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 
 export default function DistribusiForm() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ permintaan_stok_outlet_id: '', tanggal_kirim: '' });
   const [permintaans, setPermintaans] = useState([]);
-  const [materials, setMaterials] = useState([]);
-  const [items, setItems] = useState([{ bahan_baku_id: '', jumlah_kirim: '' }]);
+  const [items, setItems] = useState([]);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [fetchingItems, setFetchingItems] = useState(false);
 
   useEffect(() => {
     getPermintaans({ per_page: 100 }).then((res) => setPermintaans(res.data.data.filter((p) => ['disetujui', 'disetujui_sebagian'].includes(p.status?.kode)).map((p) => ({ value: p.id, label: `#${p.id} - ${p.outlet?.nama || '-'}` }))));
-    getMaterials({ per_page: 100 }).then((res) => setMaterials(res.data.data.map((m) => ({ value: m.id, label: `${m.nama} (${m.satuan})` }))));
   }, []);
 
-  const addItem = () => setItems([...items, { bahan_baku_id: '', jumlah_kirim: '' }]);
-  const removeItem = (i) => setItems(items.filter((_, idx) => idx !== i));
+  // Fetch permintaan details when selected
+  useEffect(() => {
+    if (!form.permintaan_stok_outlet_id) {
+      setItems([]);
+      return;
+    }
+
+    setFetchingItems(true);
+    getPermintaan(form.permintaan_stok_outlet_id)
+      .then((res) => {
+        const permintaan = res.data.data;
+        const autoItems = permintaan.details
+          ?.filter((d) => d.status?.kode === 'disetujui' || d.status?.kode === 'disetujui_sebagian')
+          .map((d) => ({
+            tipe_item: d.tipe_item || 'bahan_baku',
+            bahan_baku_id: d.bahan_baku?.id || '',
+            mesin_id: d.mesin?.id || '',
+            nama_item: d.tipe_item === 'mesin' ? d.mesin?.nama : d.bahan_baku?.nama,
+            jumlah_diminta: d.jumlah_diminta,
+            jumlah_disetujui: d.jumlah_disetujui,
+            jumlah_kirim: d.jumlah_disetujui || d.jumlah_diminta || '',
+          })) || [];
+        setItems(autoItems);
+      })
+      .catch(() => toast.error('Gagal memuat detail permintaan'))
+      .finally(() => setFetchingItems(false));
+  }, [form.permintaan_stok_outlet_id]);
+
   const updateItem = (i, field, val) => { const n = [...items]; n[i][field] = val; setItems(n); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true); setErrors({});
     try {
-      const validItems = items.filter((i) => i.bahan_baku_id && i.jumlah_kirim);
-      if (validItems.length === 0) { toast.error('Tambah minimal 1 item'); setLoading(false); return; }
+      const validItems = items.filter((i) => i.jumlah_kirim && parseFloat(i.jumlah_kirim) > 0);
+      if (validItems.length === 0) { toast.error('Tidak ada item yang bisa dikirim'); setLoading(false); return; }
       await createDistribusi({
         permintaan_stok_outlet_id: parseInt(form.permintaan_stok_outlet_id),
         tanggal_kirim: form.tanggal_kirim,
-        items: validItems.map((i) => ({ bahan_baku_id: parseInt(i.bahan_baku_id), jumlah_kirim: parseFloat(i.jumlah_kirim) })),
+        items: validItems.map((i) => ({
+          tipe_item: i.tipe_item,
+          bahan_baku_id: i.tipe_item === 'bahan_baku' && i.bahan_baku_id ? parseInt(i.bahan_baku_id) : null,
+          mesin_id: i.tipe_item === 'mesin' && i.mesin_id ? parseInt(i.mesin_id) : null,
+          jumlah_kirim: parseFloat(i.jumlah_kirim),
+        })),
       });
       toast.success('Distribusi berhasil dibuat');
       navigate('/operasional/distribusi-outlet');
@@ -59,19 +89,49 @@ export default function DistribusiForm() {
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-gray-900">Items</h3>
-            <button type="button" onClick={addItem} className="text-sm text-wash-700 hover:text-wash-900 font-medium">+ Tambah Item</button>
-          </div>
-          <div className="space-y-3">
-            {items.map((item, i) => (
-              <div key={i} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end p-3 bg-gray-50 rounded-lg">
-                <FormSelect label={i === 0 ? 'Bahan Baku' : ''} value={item.bahan_baku_id} onChange={(e) => updateItem(i, 'bahan_baku_id', e.target.value)} options={materials} placeholder="Pilih bahan" />
-                <FormInput label={i === 0 ? 'Jumlah Kirim' : ''} type="number" step="any" value={item.jumlah_kirim} onChange={(e) => updateItem(i, 'jumlah_kirim', e.target.value)} placeholder="Jumlah kirim" />
-                <div className={i === 0 ? 'pt-5' : ''}>{items.length > 1 && <button type="button" onClick={() => removeItem(i)} className="text-sm text-red-600 hover:text-red-800">Hapus</button>}</div>
-              </div>
-            ))}
-          </div>
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Items (otomatis dari permintaan)</h3>
+          {fetchingItems ? (
+            <LoadingSpinner />
+          ) : items.length === 0 ? (
+            <p className="text-sm text-gray-500">Pilih permintaan stok terlebih dahulu</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead><tr className="border-b">
+                  <th className="text-left py-2 text-gray-500">Tipe</th>
+                  <th className="text-left py-2 text-gray-500">Item</th>
+                  <th className="text-right py-2 text-gray-500">Diminta</th>
+                  <th className="text-right py-2 text-gray-500">Disetujui</th>
+                  <th className="text-right py-2 text-gray-500">Jumlah Kirim</th>
+                </tr></thead>
+                <tbody>
+                  {items.map((item, i) => (
+                    <tr key={i} className="border-b last:border-0">
+                      <td className="py-2">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${item.tipe_item === 'mesin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
+                          {item.tipe_item === 'mesin' ? 'Mesin' : 'Bahan Baku'}
+                        </span>
+                      </td>
+                      <td className="py-2 font-medium">{item.nama_item || '-'}</td>
+                      <td className="py-2 text-right">{item.jumlah_diminta}</td>
+                      <td className="py-2 text-right">{item.jumlah_disetujui ?? '-'}</td>
+                      <td className="py-2 text-right">
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          max={item.jumlah_disetujui || item.jumlah_diminta}
+                          value={item.jumlah_kirim}
+                          onChange={(e) => updateItem(i, 'jumlah_kirim', e.target.value)}
+                          className="w-24 px-2 py-1 text-sm border border-gray-300 rounded text-right"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <FormActions loading={loading} />

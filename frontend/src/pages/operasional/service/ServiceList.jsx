@@ -23,8 +23,8 @@ export default function ServiceList() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const columns = [
-    { label: 'Mesin', render: (r) => r.detail_mesin?.mesin || '-' },
-    { label: 'No. Seri', render: (r) => r.detail_mesin?.nomor_seri || '-' },
+    { label: 'Mesin', render: (r) => r.mesin?.nama || '-' },
+    { label: 'Kode Mesin', render: (r) => r.mesin?.kode_mesin || '-' },
     { label: 'Outlet', render: (r) => r.outlet?.nama || '-' },
     { label: 'Tanggal Pengajuan', render: (r) => formatDate(r.tanggal_pengajuan) },
     { label: 'Menunggu Mesin', render: (r) => r.menunggu_mesin_bebas ? <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">Ya</span> : '-' },

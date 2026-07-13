@@ -100,6 +100,11 @@ class StatusSeeder extends Seeder
             ['konteks' => 'jadwal_shift_staf', 'kode' => 'berjalan', 'label' => 'Berjalan'],
             ['konteks' => 'jadwal_shift_staf', 'kode' => 'selesai', 'label' => 'Selesai'],
 
+            // Modul 5.5 — Jadwal Shift Staf Detail (per karyawan per hari)
+            ['konteks' => 'jadwal_shift_staf_detail', 'kode' => 'belum_berjalan', 'label' => 'Belum Berjalan'],
+            ['konteks' => 'jadwal_shift_staf_detail', 'kode' => 'berjalan', 'label' => 'Berjalan'],
+            ['konteks' => 'jadwal_shift_staf_detail', 'kode' => 'selesai', 'label' => 'Selesai'],
+
             // Modul 6.2 — Loyalti
             ['konteks' => 'loyalti', 'kode' => 'menunggu_evaluasi', 'label' => 'Menunggu Evaluasi'],
             ['konteks' => 'loyalti', 'kode' => 'memenuhi_target', 'label' => 'Memenuhi Target'],

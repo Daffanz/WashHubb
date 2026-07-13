@@ -107,7 +107,7 @@ export default function ServiceDetail() {
                 <td className="px-4 py-3 text-sm font-medium">{m.nama}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">{m.satuan}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">{formatRupiah(m.harga_standar)}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{m.pivot?.jumlah_konsumsi}</td>
+                <td className="px-4 py-3 text-sm text-gray-600">{m.jumlah_konsumsi ?? m.pivot?.jumlah_konsumsi ?? '-'}</td>
                 <td className="px-4 py-3 text-right">
                   <button onClick={() => setDetachTarget(m)} className="text-sm text-red-600 hover:text-red-800 font-medium px-2 py-1 rounded hover:bg-red-50 transition">Hapus</button>
                 </td>

@@ -16,11 +16,13 @@ use App\Http\Controllers\Api\Procurement\PenerimaanController;
 use App\Http\Controllers\Api\Procurement\ReturController;
 use App\Http\Controllers\Api\SupplierStockController;
 use App\Http\Controllers\Api\Inventory\StockController;
+use App\Http\Controllers\Api\Inventory\StokOutletController;
 use App\Http\Controllers\Api\Inventory\MutasiController;
 use App\Http\Controllers\Api\ForgotPasswordController;
 use App\Http\Controllers\Api\Operasional\OrderCucianController;
 use App\Http\Controllers\Api\Operasional\PermintaanStokController;
 use App\Http\Controllers\Api\Operasional\DistribusiOutletController;
+use App\Http\Controllers\Api\Operasional\PenerimaanStokOutletController;
 use App\Http\Controllers\Api\Operasional\JadwalServiceController;
 use App\Http\Controllers\Api\Operasional\JadwalShiftController;
 use App\Http\Controllers\Api\Franchise\OutletController;
@@ -114,6 +116,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('permission:supplier-stock-manage')->get('/supplier-stocks', [SupplierStockController::class, 'index']);
         Route::middleware('permission:supplier-stock-manage')->get('/supplier-stocks/{id}', [SupplierStockController::class, 'show']);
         Route::middleware('permission:supplier-stock-manage')->post('/supplier-stocks', [SupplierStockController::class, 'store']);
+        Route::middleware('permission:supplier-stock-manage')->put('/supplier-stocks/{id}', [SupplierStockController::class, 'update']);
         Route::middleware('permission:supplier-stock-manage')->delete('/supplier-stocks/{id}', [SupplierStockController::class, 'destroy']);
 
         // UC-35/36: Distribusi
@@ -140,6 +143,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('permission:stock-list')->get('/stocks', [StockController::class, 'index']);
         Route::middleware('permission:stock-view')->get('/stocks/{type}/{id}', [StockController::class, 'show']);
 
+        // Stok Outlet
+        Route::get('/stok-outlet', [StokOutletController::class, 'index']);
+
         Route::middleware('permission:mutation-list')->get('/mutations', [MutasiController::class, 'index']);
         Route::middleware('permission:mutation-create')->post('/mutations', [MutasiController::class, 'store']);
     });
@@ -165,6 +171,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/distribusi-outlet/{distribusi}', [DistribusiOutletController::class, 'show']);
         Route::patch('/distribusi-outlet/{distribusi}/terima', [DistribusiOutletController::class, 'terima']);
 
+        // 5.3 Penerimaan Stok Outlet
+        Route::get('/penerimaan-stok-outlet', [PenerimaanStokOutletController::class, 'index']);
+        Route::post('/penerimaan-stok-outlet', [PenerimaanStokOutletController::class, 'store']);
+        Route::get('/penerimaan-stok-outlet/{penerimaan}', [PenerimaanStokOutletController::class, 'show']);
+
         // 5.4 Jadwal Service Mesin
         Route::get('/jadwal-service', [JadwalServiceController::class, 'index']);
         Route::post('/jadwal-service', [JadwalServiceController::class, 'store']);
@@ -188,7 +199,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/outlets/{outlet}', [OutletController::class, 'show']);
         Route::put('/outlets/{outlet}', [OutletController::class, 'update']);
 
-        // 6.2 Loyalti
+        // 6.2 Franchises (for dropdown)
+        Route::get('/franchises', [OutletController::class, 'franchises']);
+
+        // 6.3 Manajer Operasionals (for dropdown)
+        Route::get('/manajer-operasionals', [OutletController::class, 'manajerOperasionals']);
+
+        // 6.4 Loyalti
         Route::get('/loyalti', [LoyaltiController::class, 'index']);
         Route::post('/loyalti', [LoyaltiController::class, 'store']);
         Route::get('/loyalti/{loyalti}', [LoyaltiController::class, 'show']);
