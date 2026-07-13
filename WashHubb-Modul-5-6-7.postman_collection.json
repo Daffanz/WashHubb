@@ -1,0 +1,651 @@
+{
+  "info": {
+    "name": "WashHubb — Modul 5, 6, 7",
+    "description": "Testing API Operasional Laundry, Franchise, Dashboard",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000/api" },
+    { "key": "token", "value": "" },
+    { "key": "outlet_id", "value": "1" },
+    { "key": "order_id", "value": "" },
+    { "key": "permintaan_id", "value": "" },
+    { "key": "distribusi_id", "value": "" },
+    { "key": "jadwal_service_id", "value": "" },
+    { "key": "jadwal_shift_id", "value": "" },
+    { "key": "loyalti_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0. Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@washubb.com\",\n  \"password\": \"password\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.token) {",
+                  "  pm.collectionVariables.set('token', json.data.token);",
+                  "  console.log('Token saved:', json.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5.1 Order Cucian",
+      "item": [
+        {
+          "name": "List Order",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/operasional/orders?page=1", "host": ["{{base_url}}"], "path": ["operasional", "orders"], "query": [{ "key": "page", "value": "1" }] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Buat Order",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/operasional/orders", "host": ["{{base_url}}"], "path": ["operasional", "orders"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outlet_id\": {{outlet_id}},\n  \"jenis_layanan_id\": 1,\n  \"detail_mesin_id\": 1,\n  \"berat\": 5.5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('order_id', json.data.id);",
+                  "  console.log('Order ID saved:', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detail Order",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/operasional/orders/{{order_id}}", "host": ["{{base_url}}"], "path": ["operasional", "orders", "{{order_id}}"] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Selesai Order",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{base_url}}/operasional/orders/{{order_id}}", "host": ["{{base_url}}"], "path": ["operasional", "orders", "{{order_id}}"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"selesai\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Batalkan Order",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{base_url}}/operasional/orders/{{order_id}}", "host": ["{{base_url}}"], "path": ["operasional", "orders", "{{order_id}}"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"dibatalkan\",\n  \"alasan_pembatalan\": \"Mesin rusak mendadak\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5.2 Permintaan Stok Outlet",
+      "item": [
+        {
+          "name": "List Permintaan",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/operasional/permintaan-stok?page=1", "host": ["{{base_url}}"], "path": ["operasional", "permintaan-stok"], "query": [{ "key": "page", "value": "1" }] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Buat Permintaan",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/operasional/permintaan-stok", "host": ["{{base_url}}"], "path": ["operasional", "permintaan-stok"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outlet_id\": {{outlet_id}},\n  \"items\": [\n    { \"bahan_baku_id\": 1, \"jumlah_diminta\": 100 },\n    { \"bahan_baku_id\": 2, \"jumlah_diminta\": 50 }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('permintaan_id', json.data.id);",
+                  "  console.log('Permintaan ID saved:', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detail Permintaan",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/operasional/permintaan-stok/{{permintaan_id}}", "host": ["{{base_url}}"], "path": ["operasional", "permintaan-stok", "{{permintaan_id}}"] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Validasi Per Item (Tim Pengadaan)",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{base_url}}/operasional/permintaan-stok/{{permintaan_id}}/validate", "host": ["{{base_url}}"], "path": ["operasional", "permintaan-stok", "{{permintaan_id}}", "validate"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"detail_id\": 1, \"status\": \"disetujui\" },\n    { \"detail_id\": 2, \"status\": \"disetujui_sebagian\", \"jumlah_disetujui\": 30, \"alasan\": \"Stok terbatas\" }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Hapus Permintaan (hanya status diajukan)",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/operasional/permintaan-stok/{{permintaan_id}}", "host": ["{{base_url}}"], "path": ["operasional", "permintaan-stok", "{{permintaan_id}}"] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5.2 Distribusi Outlet",
+      "item": [
+        {
+          "name": "List Distribusi",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/operasional/distribusi-outlet?page=1", "host": ["{{base_url}}"], "path": ["operasional", "distribusi-outlet"], "query": [{ "key": "page", "value": "1" }] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Buat Distribusi (Tim Pengadaan)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/operasional/distribusi-outlet", "host": ["{{base_url}}"], "path": ["operasional", "distribusi-outlet"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permintaan_stok_outlet_id\": {{permintaan_id}},\n  \"tanggal_kirim\": \"2026-07-13\",\n  \"items\": [\n    { \"bahan_baku_id\": 1, \"jumlah_kirim\": 100 },\n    { \"bahan_baku_id\": 2, \"jumlah_kirim\": 30 }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('distribusi_id', json.data.id);",
+                  "  console.log('Distribusi ID saved:', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detail Distribusi",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/operasional/distribusi-outlet/{{distribusi_id}}", "host": ["{{base_url}}"], "path": ["operasional", "distribusi-outlet", "{{distribusi_id}}"] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Terima Distribusi (Manajer Outlet)",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{base_url}}/operasional/distribusi-outlet/{{distribusi_id}}/terima", "host": ["{{base_url}}"], "path": ["operasional", "distribusi-outlet", "{{distribusi_id}}", "terima"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"distribusi_outlet_detail_id\": 1, \"qty_diterima\": 100 },\n    { \"distribusi_outlet_detail_id\": 2, \"qty_diterima\": 30 }\n  ]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5.4 Jadwal Service Mesin",
+      "item": [
+        {
+          "name": "List Jadwal Service",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/operasional/jadwal-service?page=1", "host": ["{{base_url}}"], "path": ["operasional", "jadwal-service"], "query": [{ "key": "page", "value": "1" }] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Buat Pengajuan Service",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/operasional/jadwal-service", "host": ["{{base_url}}"], "path": ["operasional", "jadwal-service"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"detail_mesin_id\": 1,\n  \"outlet_id\": {{outlet_id}},\n  \"deskripsi\": \"Mesin berisik, perlu dicek bearing\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('jadwal_service_id', json.data.id);",
+                  "  console.log('Jadwal Service ID saved:', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detail Jadwal Service",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/operasional/jadwal-service/{{jadwal_service_id}}", "host": ["{{base_url}}"], "path": ["operasional", "jadwal-service", "{{jadwal_service_id}}"] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Validasi Service — Setuju (Franchisor)",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{base_url}}/operasional/jadwal-service/{{jadwal_service_id}}/validate", "host": ["{{base_url}}"], "path": ["operasional", "jadwal-service", "{{jadwal_service_id}}", "validate"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"disetujui\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Validasi Service — Tolak (Franchisor)",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{base_url}}/operasional/jadwal-service/{{jadwal_service_id}}/validate", "host": ["{{base_url}}"], "path": ["operasional", "jadwal-service", "{{jadwal_service_id}}", "validate"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ditolak\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Tandai Service Selesai",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{base_url}}/operasional/jadwal-service/{{jadwal_service_id}}/complete", "host": ["{{base_url}}"], "path": ["operasional", "jadwal-service", "{{jadwal_service_id}}", "complete"] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5.5 Jadwal Shift Staf",
+      "item": [
+        {
+          "name": "List Jadwal Shift",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/operasional/jadwal-shift?page=1", "host": ["{{base_url}}"], "path": ["operasional", "jadwal-shift"], "query": [{ "key": "page", "value": "1" }] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Buat Jadwal Shift",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/operasional/jadwal-shift", "host": ["{{base_url}}"], "path": ["operasional", "jadwal-shift"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outlet_id\": {{outlet_id}},\n  \"minggu_mulai\": \"2026-07-14\",\n  \"shifts\": [\n    { \"user_id\": 2, \"hari\": \"senin\", \"jam_mulai\": \"08:00\", \"jam_selesai\": \"16:00\" },\n    { \"user_id\": 3, \"hari\": \"senin\", \"jam_mulai\": \"16:00\", \"jam_selesai\": \"00:00\" },\n    { \"user_id\": 2, \"hari\": \"selasa\", \"jam_mulai\": \"08:00\", \"jam_selesai\": \"16:00\" }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('jadwal_shift_id', json.data.id);",
+                  "  console.log('Jadwal Shift ID saved:', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detail Jadwal Shift",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/operasional/jadwal-shift/{{jadwal_shift_id}}", "host": ["{{base_url}}"], "path": ["operasional", "jadwal-shift", "{{jadwal_shift_id}}"] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Edit Jadwal Shift (belum_berjalan only)",
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{base_url}}/operasional/jadwal-shift/{{jadwal_shift_id}}", "host": ["{{base_url}}"], "path": ["operasional", "jadwal-shift", "{{jadwal_shift_id}}"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shifts\": [\n    { \"user_id\": 2, \"hari\": \"senin\", \"jam_mulai\": \"07:00\", \"jam_selesai\": \"15:00\" },\n    { \"user_id\": 3, \"hari\": \"senin\", \"jam_mulai\": \"15:00\", \"jam_selesai\": \"23:00\" },\n    { \"user_id\": 2, \"hari\": \"selasa\", \"jam_mulai\": \"07:00\", \"jam_selesai\": \"15:00\" },\n    { \"user_id\": 3, \"hari\": \"selasa\", \"jam_mulai\": \"15:00\", \"jam_selesai\": \"23:00\" }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Riwayat Shift (selesai)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/operasional/jadwal-shift-history?page=1", "host": ["{{base_url}}"], "path": ["operasional", "jadwal-shift-history"], "query": [{ "key": "page", "value": "1" }] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "6.1 Outlet",
+      "item": [
+        {
+          "name": "List Outlet",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/franchise/outlets?page=1", "host": ["{{base_url}}"], "path": ["franchise", "outlets"], "query": [{ "key": "page", "value": "1" }] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Buat Outlet",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/franchise/outlets", "host": ["{{base_url}}"], "path": ["franchise", "outlets"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Outlet Baru Jakarta\",\n  \"kode_outlet\": \"OUT-JKT-001\",\n  \"alamat\": \"Jl. Sudirman No. 123, Jakarta\",\n  \"franchise_id\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Detail Outlet",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/franchise/outlets/{{outlet_id}}", "host": ["{{base_url}}"], "path": ["franchise", "outlets", "{{outlet_id}}"] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Update Outlet",
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{base_url}}/franchise/outlets/{{outlet_id}}", "host": ["{{base_url}}"], "path": ["franchise", "outlets", "{{outlet_id}}"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Outlet Jakarta Updated\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6.2 Loyalti",
+      "item": [
+        {
+          "name": "List Loyalti",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/franchise/loyalti?page=1", "host": ["{{base_url}}"], "path": ["franchise", "loyalti"], "query": [{ "key": "page", "value": "1" }] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Buat Target Loyalti",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/franchise/loyalti", "host": ["{{base_url}}"], "path": ["franchise", "loyalti"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outlet_id\": {{outlet_id}},\n  \"periode\": \"2026-07\",\n  \"target_omset\": 50000000,\n  \"target_operasional\": 85\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('loyalti_id', json.data.id);",
+                  "  console.log('Loyalti ID saved:', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detail Loyalti",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/franchise/loyalti/{{loyalti_id}}", "host": ["{{base_url}}"], "path": ["franchise", "loyalti", "{{loyalti_id}}"] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Evaluasi (input capaian_operasional)",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{base_url}}/franchise/loyalti/{{loyalti_id}}/evaluate", "host": ["{{base_url}}"], "path": ["franchise", "loyalti", "{{loyalti_id}}", "evaluate"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"capaian_operasional\": 90\n}"
+            }
+          }
+        },
+        {
+          "name": "Tetapkan Bonus",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{base_url}}/franchise/loyalti/{{loyalti_id}}/set-bonus", "host": ["{{base_url}}"], "path": ["franchise", "loyalti", "{{loyalti_id}}", "set-bonus"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jumlah_bonus\": 5000000,\n  \"keterangan\": \"Bonus kinerja Juli 2026\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Cairkan Bonus",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{base_url}}/franchise/loyalti/{{loyalti_id}}/cairkan", "host": ["{{base_url}}"], "path": ["franchise", "loyalti", "{{loyalti_id}}", "cairkan"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bukti_transfer\": \"https://example.com/bukti-transfer.jpg\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Konfirmasi Pencairan — Diterima (Franchisee)",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{base_url}}/franchise/loyalti/{{loyalti_id}}/confirm-pencairan", "host": ["{{base_url}}"], "path": ["franchise", "loyalti", "{{loyalti_id}}", "confirm-pencairan"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"diterima\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Konfirmasi Pencairan — Belum Diterima (Franchisee)",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{base_url}}/franchise/loyalti/{{loyalti_id}}/confirm-pencairan", "host": ["{{base_url}}"], "path": ["franchise", "loyalti", "{{loyalti_id}}", "confirm-pencairan"] },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"belum_diterima\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Dashboard",
+      "item": [
+        {
+          "name": "7.1 Franchisor",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/dashboard/franchisor", "host": ["{{base_url}}"], "path": ["dashboard", "franchisor"] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "7.2 Tim Pengadaan",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/dashboard/pengadaan", "host": ["{{base_url}}"], "path": ["dashboard", "pengadaan"] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "7.3 Supplier",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/dashboard/supplier", "host": ["{{base_url}}"], "path": ["dashboard", "supplier"] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "7.4 Franchisee",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/dashboard/franchisee", "host": ["{{base_url}}"], "path": ["dashboard", "franchisee"] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "7.5 Manajer Outlet",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/dashboard/manajer-outlet", "host": ["{{base_url}}"], "path": ["dashboard", "manajer-outlet"] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    }
+  ]
+}

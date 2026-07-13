@@ -1,538 +1,178 @@
-ID	Konteks	Kode
-1	akun	aktif
-2	akun	nonaktif
-3	supplier	aktif
-4	supplier	nonaktif
-5	stok_supplier	aktif
-6	stok_supplier	nonaktif
-7	bahan_baku	aktif
-8	bahan_baku	nonaktif
-9	jenis_layanan	aktif
-10	jenis_layanan	nonaktif
-11	mesin	aktif
-12	mesin	nonaktif
-13	purchase_order	diajukan
-14	purchase_order	disetujui
-15	purchase_order	disetujui_sebagian
-16	purchase_order	ditolak
-17	purchase_order	dikirim
-18	Purchase_order	selesai
-19	purchase_order_item	disetujui
-20	purchase_order_item	disetujui_sebagian
-21	purchase_order_item	ditolak
-22	distribusi_barang	dikirim
-23	distribusi_barang	dikirim_sebagian
-24	distribusi_barang	diterima
-25	retur_barang	menunggu_pengganti
-26	retur_barang	pengganti_dikirim
-27	retur_barang	selesai
-28	stok_pusat	aktif
-29	stok_pusat	nonaktif
-30	detail_mesin	aktif
-31	detail_mesin	digunakan
-32	detail_mesin	maintenance
-33	detail_mesin	nonaktif
-34	outlet	aktif
-35	outlet	nonaktif
-Jenis supplier : supplier bahan baku dan supplier mesin
+# PRD: Modul 5, 6, 7 — Operasional Laundry, Manajemen Franchise, Dashboard Monitoring
 
+## 1. Latar Belakang & Ruang Lingkup
+PRD ini merapikan spesifikasi Modul 5 (Operasional Laundry), Modul 6 (Manajemen Franchise), dan Modul 7 (Dashboard Monitoring) berdasarkan skema tabel dan use case yang sudah ditulis, dengan menambahkan: status enum eksplisit per entitas, aturan rollup status, urutan pemicu antar tabel, dan beberapa gap/inkonsistensi skema yang perlu diputuskan sebelum implementasi.
 
+> **Prinsip yang dilanjutkan dari PRD Modul 3–4 (Pengadaan):** stok hanya berubah sebagai efek dari event yang **sudah dikonfirmasi diterima**, bukan saat barang dikirim. Prinsip ini juga berlaku konsisten di modul distribusi outlet (5.2) dan mutasi stok pusat.
 
-// ============================================
-// ENUM
-// ============================================
-Enum jenis_po_enum {
-  bahan_baku
-  mesin
-}
+## 2. Aktor per Modul
 
-Enum jenis_supplier_enum {
-  bahan_baku
-  mesin
-}
+| Aktor | Modul yang digunakan |
+|---|---|
+| **Manajer Outlet** | 5.1 (order cucian), 5.2 (ajukan permintaan stok), 5.3 (riwayat), 5.4 (ajukan service), 5.5–5.6 (shift staf), 7.5 (dashboard) |
+| **Tim Pengadaan** | 5.2 (validasi & kirim), 5.3 (riwayat distribusi), 7.2 (dashboard) |
+| **Franchisor** | 5.4 (validasi service), 6.1 (kelola outlet), 6.2 (tetapkan target & cairkan bonus), 7.1 (dashboard) |
+| **Franchisee** | 6.1 (lihat outlet read-only), 6.2 (konfirmasi bonus), 7.4 (dashboard) |
+| **Supplier** | 7.3 (dashboard) — sudah dibahas penuh di PRD Modul 3–4 |
 
-// ============================================
-// TABEL STATUS
-// ============================================
-Table status {
-  id bigint [pk, increment]
-  konteks varchar
-  kode varchar
-  label varchar
+---
 
-  indexes {
-    (konteks, kode) [unique]
-  }
-}
+## 3. MODUL 5 — Operasional Laundry
 
-// ============================================
-// TABEL OUTLET
-// ============================================
-Table outlet {
-  id bigint [pk, increment]
-  nama varchar
-  kode_outlet varchar [unique]
-  alamat text
-  franchise_id bigint [ref: > franchise.id]
-  status_id bigint [ref: > status.id]
-  created_at datetime
-  updated_at datetime
-}
+### 5.1 Proses Cucian (`order_cucian`)
 
-// ============================================
-// MODUL 1
-// ============================================
-Table roles {
-  id bigint [pk, increment]
-  kode varchar [unique]
-  label varchar
-}
+**Status enum `order_cucian.status_id`:** `diproses` → `selesai` | `dibatalkan`
 
-Table permissions {
-  id bigint [pk, increment]
-  kode varchar [unique]
-  nama varchar
-  modul varchar
-  created_at datetime
-  updated_at datetime
-}
+**Alur:**
+1. Manajer Outlet membuat `order_cucian`, memilih `jenis_layanan_id` dan `detail_mesin_id` — hanya mesin dengan `status_id = aktif` di outlet tersebut yang boleh dipilih. Tidak ada mesin aktif tersedia → tolak dengan pesan error.
+2. Sistem set `waktu_masuk` = now, `estimasi_selesai` dihitung dari estimasi waktu proses `jenis_layanan`.
+3. Sistem mengurangi `stok_outlet_bahan_baku` sesuai `jenis_layanan_bahan_baku.konsumsi_per_kg × berat`, dicatat sebagai `mutasi_stok_outlet_bahan_baku` (`jenis_mutasi = keluar`, `order_cucian_id` terisi).
+4. `detail_mesin.status_id`: `aktif` → `digunakan`.
+5. Order bisa diedit selama `status ≠ selesai`.
+6. **Penyelesaian order** (`status → selesai`, set `waktu_selesai`): cek apakah ada `jadwal_service_mesin` untuk mesin yang sama dengan `status_id = disetujui` dan `menunggu_mesin_bebas = true` → jika ya, `detail_mesin.status_id → maintenance`; jika tidak → `→ aktif`.
+7. **Pembatalan** (`status → dibatalkan`, `alasan_pembatalan` wajib): kembalikan `stok_outlet_bahan_baku` (mutasi `jenis_mutasi = keluar` dibalik/dibatalkan), lalu jalankan pengecekan mesin yang sama seperti poin 6.
 
-Table role_has_permission {
-  id bigint [pk, increment]
-  role_id bigint [ref: > roles.id]
-  permission_id bigint [ref: > permissions.id]
-  created_at datetime
-  indexes {
-    (role_id, permission_id) [unique]
-  }
-}
+> Poin 6 dan 7 berbagi logika yang sama ("cek mesin sebelum dikembalikan ke aktif") — sebaiknya diimplementasikan sebagai satu fungsi/service bersama `resolveMachineStatusAfterOrderClose(detail_mesin_id)`, dipanggil dari kedua alur, supaya tidak ada duplikasi logika yang bisa divergen.
 
-Table users {
-  id bigint [pk, increment]
-  nama varchar
-  email varchar [unique]
-  password varchar
-  no_telp varchar
-  role_id bigint [ref: > roles.id]
-  status_id bigint [ref: > status.id]
-  wajib_ganti_password boolean
-  created_at datetime
-  updated_at datetime
-}
+### 5.2 Permintaan Stok Bahan Baku (Outlet → Pengadaan)
 
-Table user_outlet {
-  id bigint [pk, increment]
-  user_id bigint [ref: > users.id]
-  outlet_id bigint [ref: > outlet.id]
-  created_at datetime
-  indexes {
-    (user_id, outlet_id) [unique]
-  }
-}
+**Status enum:**
+| Tabel | Status |
+|---|---|
+| `permintaan_stok_outlet` | `diajukan` → (rollup, lihat di bawah) |
+| `permintaan_stok_outlet_detail` | `diajukan` → `disetujui` \| `disetujui_sebagian` \| `ditolak` |
+| `distribusi_outlet` | `dikirim` → `dikirim_sebagian` → `diterima` |
+| — | (tidak perlu `penerimaan_outlet.status_id` terpisah — lihat catatan 3 di bawah) |
 
-Table supplier {
-  id bigint [pk, increment]
-  user_id bigint [ref: > users.id, unique]
-  jenis_supplier jenis_supplier_enum
-  alamat text
-  katalog_produk text
-  status_id bigint [ref: > status.id]
-  created_at datetime
-  updated_at datetime
-}
+**Alur:**
+1. Manajer Outlet membuat `permintaan_stok_outlet` + detail per bahan baku. Status awal `diajukan`. Bisa dihapus manajer outlet **hanya** selama status = `diajukan` (belum divalidasi).
+2. Tim Pengadaan memvalidasi **per item**: `disetujui` (penuh), `disetujui_sebagian` (+`alasan` wajib, `jumlah_disetujui` < `jumlah_diminta`), atau `ditolak` (+`alasan` wajib).
+3. **Rollup `permintaan_stok_outlet.status_id`** dihitung otomatis dari status seluruh detail-nya (sama pola dengan rollup PO di PRD Pengadaan): semua `ditolak` → `ditolak`; semua `disetujui` penuh → `disetujui`; campuran → `disetujui_sebagian`.
+4. Tim Pengadaan membuat `distribusi_outlet` (bisa lebih dari satu batch per `permintaan_stok_outlet` — lihat catatan 1) dengan `distribusi_outlet_detail.jumlah_kirim` ≤ sisa yang belum terkirim dari `jumlah_disetujui`. Status `distribusi_outlet` = `dikirim`.
+5. Manajer Outlet mengonfirmasi via `penerimaan_outlet` (+ detail `qty_diterima`):
+   - Jika `qty_diterima` = seluruh `jumlah_kirim` yang tersisa untuk item itu → `distribusi_outlet.status_id → diterima`.
+   - Jika sebagian → status tetap `dikirim_sebagian`, menunggu batch `distribusi_outlet` berikutnya untuk sisa kekurangan.
+6. **Setiap konfirmasi penerimaan** (bukan saat distribusi dikirim): sistem otomatis menambah `stok_outlet_bahan_baku` (`mutasi_stok_outlet_bahan_baku`, `jenis_mutasi = masuk`, `penerimaan_outlet_detail_id` terisi) **dan** mengurangi `stok_pusat_bahan_baku` (`mutasi_stok_pusat_bahan_baku`, `jenis_mutasi = keluar`).
 
-Table franchise {
-  id bigint [pk, increment]
-  user_id bigint [ref: > users.id, unique]
-  created_at datetime
-  updated_at datetime
-}
+**Catatan penting / gap skema yang perlu diputuskan:**
 
-Table manajer_operasional {
-  id bigint [pk, increment]
-  user_id bigint [ref: > users.id, unique]
-  created_at datetime
-  updated_at datetime
-}
+1. **Distribusi bisa multi-batch per permintaan.** Karena `distribusi_outlet.permintaan_stok_outlet_id` merujuk ke header (bukan ke detail per item), satu permintaan bisa punya beberapa `distribusi_outlet` berbeda pada tanggal berbeda sampai seluruh `jumlah_disetujui` per item terkirim. Sisa kirim per item dihitung sebagai: `jumlah_disetujui − SUM(jumlah_kirim dari seluruh distribusi_outlet_detail terkait item itu)`.
+2. **Inkonsistensi FK di `mutasi_stok_pusat_bahan_baku`:** kolom yang tersedia adalah `distribusi_outlet_detail_id`, padahal aturan bisnis (poin 6 di atas) menyatakan stok pusat berkurang **saat konfirmasi penerimaan outlet**, bukan saat distribusi dikirim. Ini tidak konsisten dengan `mutasi_stok_outlet_bahan_baku` yang justru sudah benar memakai `penerimaan_outlet_detail_id`. **Rekomendasi:** ubah FK di `mutasi_stok_pusat_bahan_baku` menjadi referensi ke `penerimaan_outlet_detail_id`, supaya kedua mutasi (naik di outlet, turun di pusat) sama-sama dipicu oleh event konfirmasi yang sama, bukan oleh event pengiriman.
+3. **`penerimaan_outlet` tidak butuh `status_id` sendiri** (berbeda dengan `penerimaan_barang` di modul pengadaan yang butuh status untuk proses retur) — karena di level outlet tidak ada proses retur, cukup rollup langsung ke `distribusi_outlet.status_id`.
 
-Table stok_supplier_bahan_baku {
-  id bigint [pk, increment]
-  supplier_id bigint [ref: > supplier.id]
-  bahan_baku_id bigint [ref: > bahan_baku.id]
-  stok_saat_ini decimal
-  status_id bigint [ref: > status.id]
-  created_at datetime
-  updated_at datetime
-  indexes {
-    (supplier_id, bahan_baku_id) [unique]
-  }
-}
+### 5.3 Riwayat Permintaan & Distribusi
+- Manajer Outlet: riwayat `permintaan_stok_outlet` miliknya (read-only) + unduh PDF.
+- Tim Pengadaan: riwayat `distribusi_outlet` ke seluruh outlet, filter by tanggal/jenis item/tujuan outlet + unduh PDF.
 
-Table mutasi_stok_supplier_bahan_baku {
-  id bigint [pk, increment]
-  stok_supplier_bahan_baku_id bigint [ref: > stok_supplier_bahan_baku.id]
-  jenis_mutasi varchar
-  jumlah decimal
-  tanggal datetime
-  created_at datetime
-}
+### 5.4 Jadwal Service Mesin (`jadwal_service_mesin`)
 
-Table stok_supplier_mesin {
-  id bigint [pk, increment]
-  supplier_id bigint [ref: > supplier.id]
-  mesin_id bigint [ref: > mesin.id]
-  stok_saat_ini int
-  status_id bigint [ref: > status.id]
-  created_at datetime
-  updated_at datetime
-  indexes {
-    (supplier_id, mesin_id) [unique]
-  }
-}
+**Status enum:** `menunggu_persetujuan` → `ditolak` | `disetujui` → `selesai`
 
-Table mutasi_stok_supplier_mesin {
-  id bigint [pk, increment]
-  stok_supplier_mesin_id bigint [ref: > stok_supplier_mesin.id]
-  jenis_mutasi varchar
-  jumlah int
-  tanggal datetime
-  created_at datetime
-}
+**Alur:**
+1. Manajer Outlet mengajukan. Sistem cek status mesin real-time:
+   - `maintenance` atau `nonaktif` → sistem langsung menolak (`status → ditolak`, tanpa perlu Franchisor).
+   - `aktif` atau `digunakan` → diterima ke antrean (`status → menunggu_persetujuan`); jika mesin sedang `digunakan`, tampilkan peringatan (bukan blokir).
+2. Franchisor memvalidasi:
+   - Tolak → `status → ditolak`.
+   - Setuju → cek ulang status mesin **real-time** (bisa sudah berubah sejak diajukan):
+     - `aktif` → langsung `detail_mesin.status_id → maintenance`, `jadwal_service_mesin.status → disetujui`.
+     - `digunakan` → `jadwal_service_mesin.status → disetujui` DAN `menunggu_mesin_bebas = true`; `detail_mesin.status_id` **belum** berubah, ditunda sampai order cucian yang memakainya selesai/dibatalkan (lihat 5.1 poin 6–7).
+3. Manajer Outlet menandai service selesai → `jadwal_service_mesin.status → selesai`, `detail_mesin.status_id`: `maintenance → aktif`.
+4. Jadwal yang sudah dibuat **tidak bisa dihapus** (audit trail).
 
-// ============================================
-// MODUL 2 — DATA MASTER
-// ============================================
-Table kategori_bahan_baku {
-  id bigint [pk, increment]
-  nama varchar [unique]
-  created_at datetime
-  updated_at datetime
-}
+### 5.5 & 5.6 Jadwal Shift Staf
 
-Table bahan_baku {
-  id bigint [pk, increment]
-  nama varchar
-  kategori_id bigint [ref: > kategori_bahan_baku.id]
-  satuan varchar
-  harga_standar decimal
-  status_id bigint [ref: > status.id]
-  created_at datetime
-  updated_at datetime
-  indexes {
-    (nama, kategori_id) [unique]
-  }
-}
+**Status enum `jadwal_shift_staf.status_id`:** `belum_berjalan` → `berjalan` → `selesai`
+> Skema tidak menunjukkan siapa/apa yang memicu transisi `belum_berjalan → berjalan → selesai`. **Rekomendasi:** jalankan sebagai scheduled job harian yang membandingkan `minggu_mulai` dengan tanggal berjalan (`berjalan` saat mulai minggu itu, `selesai` saat minggu itu berakhir), bukan aksi manual.
 
-Table jenis_layanan {
-  id bigint [pk, increment]
-  nama varchar [unique]
-  harga_standar_per_kg decimal
-  status_id bigint [ref: > status.id]
-  created_at datetime
-  updated_at datetime
-}
+- Manajer Outlet membuat jadwal mingguan + detail per staf/hari. Bisa diedit (tambah/hapus/simpan) **hanya** selama `belum_berjalan`.
+- Riwayat (5.6): tampilkan jadwal berstatus `selesai`, unduh PDF.
 
-Table jenis_layanan_bahan_baku {
-  id bigint [pk, increment]
-  jenis_layanan_id bigint [ref: > jenis_layanan.id]
-  bahan_baku_id bigint [ref: > bahan_baku.id]
-  konsumsi_per_kg decimal
-  created_at datetime
-  updated_at datetime
-  indexes {
-    (jenis_layanan_id, bahan_baku_id) [unique]
-  }
-}
+---
 
-// ============================================
-// MESIN (MASTER MODEL/TIPE MESIN)
-// ============================================
-Table mesin {
-  id bigint [pk, increment]
-  nama varchar
-  kode_mesin varchar [unique]
-  merk varchar
-  tipe varchar
-  kapasitas int
-  status_id bigint [ref: > status.id]
-  created_at datetime
-  updated_at datetime
-  indexes {
-    nama [unique]
-  }
-}
+## 4. MODUL 6 — Manajemen Franchise
 
-// ============================================
-// MODUL 3 — PENGADAAN BARANG
-// ============================================
-Table purchase_order {
-  id bigint [pk, increment]
-  nomor_po varchar [unique]
-  supplier_id bigint [ref: > supplier.id]
-  dibuat_oleh_id bigint [ref: > users.id]
-  jenis_po jenis_po_enum
-  total_nilai decimal
-  status_id bigint [ref: > status.id]
-  created_at datetime
-  updated_at datetime
-}
+### 6.1 Data Outlet
+- Franchisor mendaftarkan outlet baru (set `franchise_id` pemilik) dan bisa mengubah datanya.
+- Franchisee: read-only, dibatasi otomatis ke outlet miliknya sendiri (filter by `franchise_id`).
+- Outlet tutup → `status_id → nonaktif` (soft, tidak dihapus — konsisten dengan pola soft-delete supplier di PRD Pengadaan).
 
-Table purchase_order_item_bahan_baku {
-  id bigint [pk, increment]
-  po_id bigint [ref: > purchase_order.id]
-  bahan_baku_id bigint [ref: > bahan_baku.id]
-  jumlah decimal
-  harga_satuan decimal
-  qty_disetujui decimal
-  status_id bigint [ref: > status.id]
-  alasan text
-  created_at datetime
-  updated_at datetime
-  indexes {
-    (po_id, bahan_baku_id) [unique]
-  }
-}
+### 6.2 Loyalti (Bonus Kinerja Mitra)
 
-Table purchase_order_item_mesin {
-  id bigint [pk, increment]
-  po_id bigint [ref: > purchase_order.id]
-  mesin_id bigint [ref: > mesin.id]
-  jumlah int
-  harga_satuan decimal
-  qty_disetujui int
-  status_id bigint [ref: > status.id]
-  alasan text
-  created_at datetime
-  updated_at datetime
-  indexes {
-    (po_id, mesin_id) [unique]
-  }
-}
+**Status enum `loyalti.status_id`:**
+```
+menunggu_evaluasi
+  → memenuhi_target          (omset_aktual ≥ target_omset DAN capaian_operasional ≥ target_operasional)
+  → tidak_memenuhi_target     (salah satu tidak terpenuhi — proses berhenti, terminal)
+memenuhi_target
+  → menunggu_pencairan        (Franchisor menetapkan jumlah_bonus + keterangan)
+  → diproses_pencairan        (Franchisor mencairkan, upload bukti_transfer)
+  → selesai                   (Franchisee konfirmasi "Diterima")
+  → menunggu_pencairan        (Franchisee konfirmasi "Belum Diterima" — kembali untuk dicairkan ulang)
+```
 
-Table distribusi_barang {
-  id bigint [pk, increment]
-  po_id bigint [ref: > purchase_order.id]
-  nomor_distribusi varchar [unique]
-  tanggal_kirim date
-  status_id bigint [ref: > status.id]
-  created_at datetime
-  updated_at datetime
-}
+**Status enum `loyalti_pencairan.status_id`:** `diproses` → `selesai` | `gagal`
 
-Table distribusi_barang_detail_bahan_baku {
-  id bigint [pk, increment]
-  distribusi_barang_id bigint [ref: > distribusi_barang.id]
-  po_item_id bigint [ref: > purchase_order_item_bahan_baku.id]
-  jumlah_kirim decimal
-  created_at datetime
-  updated_at datetime
-}
+**Alur:**
+1. Franchisor menetapkan `target_omset` + `target_operasional` per outlet per periode → `loyalti` dibuat, `status = menunggu_evaluasi`.
+2. Franchisor input `capaian_operasional` (nilai manual, hasil evaluasi SOP di luar sistem).
+3. **Begitu `capaian_operasional` diisi**, sistem otomatis: hitung `omset_aktual` = SUM `total_harga` dari `order_cucian` outlet tsb pada periode terkait → bandingkan dengan kedua target → set `memenuhi_target` (boolean) dan `status`.
+4. Jika `memenuhi_target = true`: Franchisor input `jumlah_bonus` + `keterangan` → `status → menunggu_pencairan`. Franchisee dapat notifikasi.
+5. Franchisor mencairkan: buat `loyalti_pencairan` (`status = diproses`), upload `bukti_transfer` → `loyalti.status → diproses_pencairan`.
+6. Franchisee konfirmasi (**bukan Franchisor yang menyatakan sendiri** — pemisahan wewenang ini penting untuk audit):
+   - "Diterima" → `loyalti_pencairan.status → selesai`, `loyalti.status → selesai`.
+   - "Belum Diterima" → `loyalti_pencairan.status → gagal`, `loyalti.status → menunggu_pencairan` (untuk dicairkan ulang).
 
-Table distribusi_barang_detail_mesin {
-  id bigint [pk, increment]
-  distribusi_barang_id bigint [ref: > distribusi_barang.id]
-  po_item_id bigint [ref: > purchase_order_item_mesin.id]
-  jumlah_kirim int
-  created_at datetime
-  updated_at datetime
-}
+> **Catatan:** karena `loyalti_pencairan.status = gagal` bersifat terminal untuk baris itu, pencairan ulang (retry) harus membuat **baris `loyalti_pencairan` baru**, bukan mengubah baris yang gagal — supaya riwayat percobaan pencairan sebelumnya (termasuk `bukti_transfer` yang salah/tidak sampai) tetap tersimpan untuk audit.
 
-Table penerimaan_barang {
-  id bigint [pk, increment]
-  distribusi_barang_id bigint [ref: > distribusi_barang.id]
-  nomor_penerimaan varchar [unique]
-  tanggal_terima date
-  subtotal decimal
-  diskon decimal
-  ppn decimal
-  total_bayar decimal
-  created_at datetime
-  updated_at datetime
-}
+---
 
-Table penerimaan_barang_detail_bahan_baku {
-  id bigint [pk, increment]
-  penerimaan_barang_id bigint [ref: > penerimaan_barang.id]
-  distribusi_barang_detail_bahan_baku_id bigint [ref: > distribusi_barang_detail_bahan_baku.id]
-  qty_diterima decimal
-  kondisi varchar
-  created_at datetime
-  updated_at datetime
-}
+## 5. MODUL 7 — Dashboard Monitoring (Read-only)
 
-Table penerimaan_barang_detail_mesin {
-  id bigint [pk, increment]
-  penerimaan_barang_id bigint [ref: > penerimaan_barang.id]
-  distribusi_barang_detail_mesin_id bigint [ref: > distribusi_barang_detail_mesin.id]
-  nomor_seri varchar
-  qty_diterima int
-  kondisi varchar
-  created_at datetime
-  updated_at datetime
-}
+Lima dashboard terpisah, masing-masing dibatasi otomatis sesuai cakupan data aktor (bukan satu dashboard generik). **Tidak ada aksi tulis** dari halaman manapun di modul ini — setiap pesan kondisi kritis berupa tautan (deep link) ke modul terkait, bukan aksi langsung.
 
-// ============================================
-// RETUR BARANG
-// ============================================
-Table retur_barang {
-  id bigint [pk, increment]
-  penerimaan_barang_id bigint [ref: > penerimaan_barang.id]
-  tanggal_retur datetime
-  status_id bigint [ref: > status.id]
-  created_at datetime
-  updated_at datetime
-}
+| Dashboard | Aktor | Data yang ditampilkan | Kondisi kritis |
+|---|---|---|---|
+| 7.1 | Franchisor | Ringkasan seluruh outlet real-time: data outlet, agregat omzet dari `order_cucian`, status `loyalti`, jumlah/status `order_cucian`, status `detail_mesin` per outlet. Filter: Outlet, Periode, Kategori. | Mesin bermasalah; loyalti tidak memenuhi target / tertunda pencairan |
+| 7.2 | Tim Pengadaan | Ringkasan `purchase_order`, `distribusi_barang`, `permintaan_stok_outlet`, agregat `stok_pusat_bahan_baku` / `stok_pusat_mesin` | Stok pusat menipis; PO/permintaan lama belum divalidasi |
+| 7.3 | Supplier | `purchase_order` miliknya, `distribusi_barang` yang belum dikonfirmasi, stok supplier miliknya (dibatasi `supplier_id`) | PO lama belum divalidasi; distribusi lama belum dikonfirmasi Tim Pengadaan |
+| 7.4 | Franchisee | Omzet outlet miliknya, status `loyalti`, riwayat bonus (dibatasi `franchise_id`) | Notifikasi bonus loyalti baru menunggu konfirmasi |
+| 7.5 | Manajer Outlet | `order_cucian`, `stok_outlet_bahan_baku` (termasuk yang di bawah `stok_minimum`), status `detail_mesin`, `jadwal_service_mesin` (dibatasi outlet via `user_outlet`) | Stok menipis; mesin bermasalah; jadwal service menunggu persetujuan terlalu lama |
 
-Table retur_barang_detail_bahan_baku {
-  id bigint [pk, increment]
-  retur_barang_id bigint [ref: > retur_barang.id]
-  penerimaan_barang_detail_bahan_baku_id bigint [ref: > penerimaan_barang_detail_bahan_baku.id]
-  qty_retur decimal
-  alasan text
-  foto_bukti varchar
-  qty_pengganti decimal
-  status_id bigint [ref: > status.id]
-  created_at datetime
-  updated_at datetime
-}
+**Definisi "kritis" yang perlu disepakati sebagai konstanta konfigurasi** (bukan hardcode):
+- "Stok menipis" = `stok_saat_ini < stok_minimum` (level outlet) — level pusat perlu ambang terpisah karena `stok_pusat_bahan_baku` tidak punya kolom minimum di skema saat ini (**gap skema**: pertimbangkan tambah `stok_minimum` juga di `stok_pusat_bahan_baku`).
+- "PO/permintaan lama belum divalidasi" dan "jadwal service menunggu terlalu lama" perlu ambang waktu (mis. > 2×24 jam) yang sebaiknya jadi setting, bukan angka tetap di kode.
 
-Table retur_barang_detail_mesin {
-  id bigint [pk, increment]
-  retur_barang_id bigint [ref: > retur_barang.id]
-  penerimaan_barang_detail_mesin_id bigint [ref: > penerimaan_barang_detail_mesin.id]
-  qty_retur int
-  alasan text
-  foto_bukti varchar
-  qty_pengganti int
-  nomor_seri_pengganti varchar [ref: > detail_mesin.nomor_seri]
-  status_id bigint [ref: > status.id]
-  created_at datetime
-  updated_at datetime
-}
+---
 
-// ============================================
-// DETAIL MESIN (UNIT FISIK DI OUTLET)
-// ============================================
-Table detail_mesin {
-  id bigint [pk, increment]
-  mesin_id bigint [ref: > mesin.id]
-  nomor_seri varchar [unique]
-  outlet_id bigint [ref: > outlet.id]
-  tanggal_terima_pusat date
-  status_id bigint [ref: > status.id]
-  created_at datetime
-  updated_at datetime
-}
+## 6. Kriteria Penerimaan (Acceptance Criteria)
 
-// ============================================
-// MODUL 4 — MANAJEMEN STOK
-// ============================================
-Table stok_pusat_bahan_baku {
-  id bigint [pk, increment]
-  bahan_baku_id bigint [ref: > bahan_baku.id]
-  stok_masuk decimal
-  stok_keluar decimal
-  stok_saat_ini decimal
-  created_at datetime
-  updated_at datetime
-  indexes {
-    bahan_baku_id [unique]
-  }
-}
+**Modul 5**
+- [ ] Order cucian tidak bisa dibuat jika tidak ada `detail_mesin` berstatus `aktif` di outlet terkait.
+- [ ] Stok bahan baku outlet berkurang otomatis tepat sejumlah `konsumsi_per_kg × berat` saat order dibuat, dan bertambah kembali saat order dibatalkan.
+- [ ] Status mesin kembali ke `aktif` atau berpindah ke `maintenance` sesuai keberadaan jadwal service yang `disetujui` + `menunggu_mesin_bebas`, konsisten baik order selesai maupun dibatalkan.
+- [ ] Permintaan stok hanya bisa dihapus outlet selama status `diajukan`.
+- [ ] Rollup status permintaan & distribusi outlet terhitung otomatis dari detail, tidak ada input manual di header.
+- [ ] Distribusi outlet mendukung multi-batch pengiriman sampai `jumlah_disetujui` terpenuhi penuh.
+- [ ] Stok pusat berkurang dan stok outlet bertambah pada event yang sama (konfirmasi penerimaan), bukan pada event pengiriman.
+- [ ] Jadwal service otomatis ditolak sistem jika mesin sedang `maintenance`/`nonaktif` saat diajukan.
+- [ ] Perubahan status mesin ke `maintenance` tertunda dengan benar jika mesin sedang `digunakan` saat disetujui Franchisor.
+- [ ] Jadwal shift staf tidak bisa diedit setelah `berjalan`.
 
-Table mutasi_stok_pusat_bahan_baku {
-  id bigint [pk, increment]
-  stok_pusat_bahan_baku_id bigint [ref: > stok_pusat_bahan_baku.id]
-  jenis_mutasi varchar
-  jumlah decimal
-  tanggal datetime
-  penerimaan_barang_detail_bahan_baku_id bigint [ref: > penerimaan_barang_detail_bahan_baku.id]
-  created_at datetime
-}
+**Modul 6**
+- [ ] Franchisee hanya bisa melihat (bukan mengedit) data outlet miliknya.
+- [ ] `omset_aktual` dihitung otomatis dari `order_cucian`, tidak diinput manual.
+- [ ] Status `loyalti` tidak bisa lompat ke `menunggu_pencairan` jika `memenuhi_target = false`.
+- [ ] Konfirmasi penerimaan bonus hanya bisa dilakukan Franchisee, bukan Franchisor.
+- [ ] Retry pencairan setelah "Belum Diterima" membuat baris `loyalti_pencairan` baru, riwayat lama tetap ada.
 
-Table stok_pusat_mesin {
-  id bigint [pk, increment]
-  mesin_id bigint [ref: > mesin.id]
-  stok_masuk int
-  stok_keluar int
-  stok_saat_ini int
-  created_at datetime
-  updated_at datetime
-  indexes {
-    mesin_id [unique]
-  }
-}
+**Modul 7**
+- [ ] Setiap dashboard menampilkan data yang dibatasi otomatis sesuai scope aktor (tidak ada kebocoran data lintas outlet/franchise/supplier).
+- [ ] Tidak ada elemen aksi tulis di halaman dashboard manapun.
+- [ ] Ambang "kritis" (stok minimum, waktu tunggu validasi) dapat diubah lewat konfigurasi, bukan hardcode.
 
-Table mutasi_stok_pusat_mesin {
-  id bigint [pk, increment]
-  stok_pusat_mesin_id bigint [ref: > stok_pusat_mesin.id]
-  jenis_mutasi varchar
-  jumlah int
-  tanggal datetime
-  penerimaan_barang_detail_mesin_id bigint [ref: > penerimaan_barang_detail_mesin.id]
-  created_at datetime
-}
-
-FULL ALUR BISNIS (REVISI)
-MODUL 1 — AKUN DAN DATA SUPPLIER
-Modul ini berkaitan dengan pengelolaan akun dan data identitas Supplier sebagai aktor eksternal, sekaligus penentuan jenis dagangan Supplier (bahan baku atau mesin).
-1.	Tim IT membuat akun pengguna (users) untuk calon mitra Supplier melalui menu Manajemen User (UC-01), dengan role_id sesuai role Supplier dan status awal aktif.
-2.	Tim Pengadaan menginput data profil Supplier melalui menu Supplier (UC-22/23/24), terhubung satu-ke-satu (user_id unique) dengan akun yang sudah dibuat Tim IT. Pada tahap ini, Tim Pengadaan wajib menentukan jenis_supplier — apakah Supplier tersebut berjualan Bahan Baku atau Mesin. Field ini bersifat final saat pembuatan data (tidak disarankan diubah setelah Supplier punya riwayat stok/PO, untuk menghindari data yang tidak konsisten).
-3.	jenis_supplier ini menjadi penanda utama yang dipakai di seluruh Modul 3 untuk: 
-o	Membatasi jenis stok apa saja yang boleh diinput Supplier (UC-39/40).
-o	Memfilter daftar Supplier saat Tim Pengadaan membuat PO sesuai jenis_po (UC-25).
-o	Memfilter daftar PO yang muncul saat Supplier melakukan validasi (UC-31) dan distribusi (UC-35).
-Pembagian tanggung jawab: Tim IT → akses/autentikasi. Tim Pengadaan → data master Supplier termasuk penentuan jenisnya.
-________________________________________
-MODUL 2 — DATA MASTER (FRANCHISOR)
-Dikelola oleh Franchisor, menjadi acuan bagi modul-modul lain:
-1.	Jenis Layanan (jenis_layanan, UC-10/11/12) beserta komposisi bahan baku (jenis_layanan_bahan_baku, konsumsi_per_kg).
-2.	Kategori Bahan Baku (kategori_bahan_baku, UC-19/20/21) dan Bahan Baku (bahan_baku, UC-13/14/15) yang dikelompokkan berdasarkan kategori tersebut.
-3.	Mesin (mesin, UC-16/17/18) — data master tipe/model mesin (merk, tipe, kapasitas). Unit fisik per outlet (dengan nomor seri) dicatat terpisah di detail_mesin pada Modul 3/4 dan seterusnya.
-________________________________________
-MODUL 3 — PENGADAAN BARANG DARI SUPPLIER
-Ruang lingkup: interaksi Tim Pengadaan ↔ Supplier untuk pengadaan bahan baku/mesin dari Supplier ke gudang pusat. Distribusi gudang pusat → outlet berada di modul lain.
-3.1 Pembuatan dan Pengisian Detail PO
-1.	Tim Pengadaan membuat PO (purchase_order), memilih Supplier dan jenis_po (UC-25). Status awal diajukan. Daftar Supplier yang ditampilkan pada form ini difilter berdasarkan jenis_supplier yang cocok dengan jenis_po — misal saat jenis_po = mesin, hanya Supplier dengan jenis_supplier = mesin yang muncul sebagai pilihan.
-2.	Selama status diajukan, Tim Pengadaan dapat: 
-o	Mengisi/menambah item (purchase_order_item_bahan_baku/_mesin) — UC-26, UC-27.
-o	Menghapus PO beserta seluruh detailnya (UC-28) apabila belum dikirim ke Supplier.
-3.	Begitu status berubah menjadi dikirim (lihat 3.2) atau lebih lanjut, PO tidak dapat lagi dihapus atau diubah.
-3.2 Pengiriman PO ke Supplier
-Tim Pengadaan mengklik "Kirim ke Supplier" (UC-30). Sistem memvalidasi PO memiliki minimal satu item, mengubah status menjadi dikirim, mengirim notifikasi ke Supplier, dan mengunci kemampuan edit/hapus dari sisi Tim Pengadaan.
-3.3 Validasi PO oleh Supplier
-Supplier memvalidasi setiap item satu per satu (UC-31). Karena PO sudah difilter berdasarkan jenis_supplier sejak awal (3.1), Supplier hanya akan melihat PO yang memang sesuai jenis dagangannya:
-•	Disetujui → qty_disetujui = qty_diminta.
-•	Disetujui Sebagian → qty_disetujui sesuai kemampuan pasok + alasan.
-•	Ditolak → qty_disetujui = 0 + alasan.
-Status PO keseluruhan dihitung dari agregasi status semua item:
-•	Semua Disetujui → PO disetujui.
-•	Semua Ditolak → PO ditolak.
-•	Kombinasi apa pun → PO disetujui_sebagian.
-PO dikunci, notifikasi hasil validasi dikirim ke Tim Pengadaan. Kekurangan pada item disetujui_sebagian/ditolak ditindaklanjuti lewat PO baru secara manual.
-3.4 Distribusi Barang oleh Supplier
-Untuk item yang disetujui, Supplier mencatat pengiriman (distribusi_barang + detail) berstatus dikirim atau dikirim_sebagian (UC-35). Sistem memvalidasi jumlah kirim ≤ jumlah disetujui, dan menolak pengiriman baru bila masih ada pengiriman sebelumnya yang belum dikonfirmasi. Supplier dapat melihat riwayat distribusinya, difilter tanggal/jenis item/tujuan, dan mengunduh PDF (UC-36).
-3.5 Penerimaan Barang oleh Tim Pengadaan
-Tim Pengadaan mencatat penerimaan (penerimaan_barang + detail, termasuk kondisi, diskon, ppn, dan nomor_seri khusus mesin) — UC-34:
-•	Kondisi baik → stok pusat bertambah (stok_pusat_bahan_baku/stok_pusat_mesin, tercatat di mutasi_stok_pusat_*), stok Supplier berkurang, status distribusi_barang → diterima.
-•	Ada barang cacat → dibuat retur_barang (+ detail: qty_retur, alasan, foto_bukti). Stok pusat hanya bertambah untuk barang tidak cacat. Status distribusi_barang → dikirim_sebagian, status retur_barang → menunggu_pengganti.
-3.6 Proses Retur
-1.	Supplier menginput data barang pengganti (UC-37) → status retur berubah menjadi pengganti_dikirim.
-2.	Tim Pengadaan memeriksa dan mengonfirmasi (UC-38): 
-o	Sesuai → stok pusat bertambah, status distribusi_barang → diterima, status retur_barang → selesai.
-o	Tidak sesuai → Tim Pengadaan menolak; status retur tetap menunggu_pengganti, status distribusi tetap dikirim_sebagian, notifikasi penolakan dikirim ke Supplier.
-3.7 Riwayat, Monitoring, dan Manajemen Stok Supplier
-•	Tim Pengadaan memantau riwayat PO (UC-29) dengan status resmi: diajukan → dikirim → disetujui / disetujui_sebagian / ditolak → selesai, filter tanggal/tipe/status, unduh PDF.
-•	Supplier dapat melihat detail stok miliknya sendiri — stok masuk, keluar, saat ini, dan riwayat mutasi (UC-32). Jenis item yang bisa dilihat otomatis dibatasi sesuai jenis_supplier miliknya — Supplier Bahan Baku hanya melihat stok_supplier_bahan_baku, Supplier Mesin hanya melihat stok_supplier_mesin.
-•	Tim Pengadaan dapat melihat detail stok gudang pusat (UC-33) — agregat total per bahan baku/mesin, khusus untuk kebutuhan Tim Pengadaan (bukan per outlet; stok outlet akan menjadi modul tersendiri di luar cakupan Modul 1–4 ini).
-•	Supplier dapat menambah (UC-39) dan menghapus (UC-40, hanya jika belum pernah didistribusikan) stok miliknya sendiri. Pilihan "jenis item" pada form tambah stok (bahan baku/mesin) otomatis dikunci/difilter sesuai jenis_supplier Supplier yang sedang login — mencegah Supplier Bahan Baku salah input stok Mesin, dan sebaliknya.
-________________________________________
-MODUL 4 — MANAJEMEN STOK OTOMATIS
-Cakupan: stok gudang pusat (stok_pusat_bahan_baku, stok_pusat_mesin) dan stok Supplier (stok_supplier_bahan_baku, stok_supplier_mesin). Tidak mencakup stok outlet karena tabel tersebut belum ada di skema.
-Prinsip utama:
-1.	Stok Supplier berkurang saat distribusi_barang berubah menjadi dikirim/dikirim_sebagian (mutasi_stok_supplier_*).
-2.	Stok Pusat bertambah saat penerimaan_barang dikonfirmasi diterima (mutasi_stok_pusat_*, mengacu ke penerimaan_barang_detail_*).
-3.	Barang retur tidak menambah stok pusat sampai barang pengganti diterima dan retur_barang berstatus selesai.
-4.	Tabel detail_mesin (unit fisik mesin dengan nomor_seri, outlet_id, dan status_id: aktif/digunakan/maintenance/nonaktif) disiapkan sebagai fondasi untuk modul selanjutnya (alokasi mesin ke outlet). Dalam cakupan Modul 1–4 ini, detail_mesin belum digunakan secara aktif — fokus Modul 3/4 cukup sampai pada stok_pusat_mesin (agregat jumlah mesin di gudang pusat).
-5.	jenis_supplier pada tabel supplier berfungsi sebagai gerbang validasi (guard) di level aplikasi — memastikan setiap baris yang masuk ke stok_supplier_bahan_baku hanya berasal dari Supplier ber-jenis_supplier = bahan_baku, dan setiap baris di stok_supplier_mesin hanya dari Supplier ber-jenis_supplier = mesin. Validasi ini idealnya diterapkan di layer Controller/Form Request Laravel, bukan hanya di level UI, supaya tetap aman walau ada request langsung ke API.
-
+## 7. Di Luar Cakupan
+- Detail perhitungan `total_harga` di `order_cucian` (asumsi sudah ada logika harga per kg dari `jenis_layanan`, tidak diubah di sini).
+- Definisi lengkap tabel `status` sebagai master lookup (diasumsikan sudah ada, dipakai lintas modul).
+- Notifikasi real-time (push/WhatsApp) — pada modul ini disebut sebagai "notifikasi" secara fungsional, mekanisme pengirimannya di luar cakupan PRD.
+- Perhitungan `estimasi_selesai` berdasarkan jenis layanan (diasumsikan sudah ada aturan di tabel `jenis_layanan`, tidak didefinisikan ulang di sini).

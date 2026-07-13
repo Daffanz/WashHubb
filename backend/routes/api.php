@@ -18,6 +18,14 @@ use App\Http\Controllers\Api\SupplierStockController;
 use App\Http\Controllers\Api\Inventory\StockController;
 use App\Http\Controllers\Api\Inventory\MutasiController;
 use App\Http\Controllers\Api\ForgotPasswordController;
+use App\Http\Controllers\Api\Operasional\OrderCucianController;
+use App\Http\Controllers\Api\Operasional\PermintaanStokController;
+use App\Http\Controllers\Api\Operasional\DistribusiOutletController;
+use App\Http\Controllers\Api\Operasional\JadwalServiceController;
+use App\Http\Controllers\Api\Operasional\JadwalShiftController;
+use App\Http\Controllers\Api\Franchise\OutletController;
+use App\Http\Controllers\Api\Franchise\LoyaltiController;
+use App\Http\Controllers\Api\Dashboard\DashboardController;
 use Illuminate\Support\Facades\Route;
 
 // Auth (public)
@@ -134,5 +142,68 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::middleware('permission:mutation-list')->get('/mutations', [MutasiController::class, 'index']);
         Route::middleware('permission:mutation-create')->post('/mutations', [MutasiController::class, 'store']);
+    });
+
+    // --- Modul 5: Operasional Laundry ---
+    Route::prefix('operasional')->group(function () {
+        // 5.1 Order Cucian
+        Route::get('/orders', [OrderCucianController::class, 'index']);
+        Route::post('/orders', [OrderCucianController::class, 'store']);
+        Route::get('/orders/{order}', [OrderCucianController::class, 'show']);
+        Route::patch('/orders/{order}', [OrderCucianController::class, 'update']);
+
+        // 5.2 Permintaan Stok Outlet
+        Route::get('/permintaan-stok', [PermintaanStokController::class, 'index']);
+        Route::post('/permintaan-stok', [PermintaanStokController::class, 'store']);
+        Route::get('/permintaan-stok/{permintaan}', [PermintaanStokController::class, 'show']);
+        Route::delete('/permintaan-stok/{permintaan}', [PermintaanStokController::class, 'destroy']);
+        Route::patch('/permintaan-stok/{permintaan}/validate', [PermintaanStokController::class, 'validateItems']);
+
+        // 5.2 Distribusi Outlet
+        Route::get('/distribusi-outlet', [DistribusiOutletController::class, 'index']);
+        Route::post('/distribusi-outlet', [DistribusiOutletController::class, 'store']);
+        Route::get('/distribusi-outlet/{distribusi}', [DistribusiOutletController::class, 'show']);
+        Route::patch('/distribusi-outlet/{distribusi}/terima', [DistribusiOutletController::class, 'terima']);
+
+        // 5.4 Jadwal Service Mesin
+        Route::get('/jadwal-service', [JadwalServiceController::class, 'index']);
+        Route::post('/jadwal-service', [JadwalServiceController::class, 'store']);
+        Route::get('/jadwal-service/{jadwal}', [JadwalServiceController::class, 'show']);
+        Route::patch('/jadwal-service/{jadwal}/validate', [JadwalServiceController::class, 'validate']);
+        Route::patch('/jadwal-service/{jadwal}/complete', [JadwalServiceController::class, 'complete']);
+
+        // 5.5 Jadwal Shift Staf
+        Route::get('/jadwal-shift', [JadwalShiftController::class, 'index']);
+        Route::post('/jadwal-shift', [JadwalShiftController::class, 'store']);
+        Route::get('/jadwal-shift/{jadwal}', [JadwalShiftController::class, 'show']);
+        Route::put('/jadwal-shift/{jadwal}', [JadwalShiftController::class, 'update']);
+        Route::get('/jadwal-shift-history', [JadwalShiftController::class, 'history']);
+    });
+
+    // --- Modul 6: Manajemen Franchise ---
+    Route::prefix('franchise')->group(function () {
+        // 6.1 Outlet
+        Route::get('/outlets', [OutletController::class, 'index']);
+        Route::post('/outlets', [OutletController::class, 'store']);
+        Route::get('/outlets/{outlet}', [OutletController::class, 'show']);
+        Route::put('/outlets/{outlet}', [OutletController::class, 'update']);
+
+        // 6.2 Loyalti
+        Route::get('/loyalti', [LoyaltiController::class, 'index']);
+        Route::post('/loyalti', [LoyaltiController::class, 'store']);
+        Route::get('/loyalti/{loyalti}', [LoyaltiController::class, 'show']);
+        Route::patch('/loyalti/{loyalti}/evaluate', [LoyaltiController::class, 'evaluate']);
+        Route::patch('/loyalti/{loyalti}/set-bonus', [LoyaltiController::class, 'setBonus']);
+        Route::patch('/loyalti/{loyalti}/cairkan', [LoyaltiController::class, 'cairkan']);
+        Route::patch('/loyalti/{loyalti}/confirm-pencairan', [LoyaltiController::class, 'confirmPencairan']);
+    });
+
+    // --- Modul 7: Dashboard ---
+    Route::prefix('dashboard')->group(function () {
+        Route::get('/franchisor', [DashboardController::class, 'franchisor']);
+        Route::get('/pengadaan', [DashboardController::class, 'pengadaan']);
+        Route::get('/supplier', [DashboardController::class, 'supplier']);
+        Route::get('/franchisee', [DashboardController::class, 'franchisee']);
+        Route::get('/manajer-outlet', [DashboardController::class, 'manajerOutlet']);
     });
 });
