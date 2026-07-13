@@ -82,10 +82,10 @@ class UserController extends Controller
         ]);
     }
 
-    public function destroy(User $user): JsonResponse
+    public function destroy(Request $request, User $user): JsonResponse
     {
-        if (in_array($user->role?->kode, ['admin_it', 'franchise', 'manager_outlet'])) {
-            return response()->json(['message' => 'User dengan role ini tidak dapat dihapus.'], 403);
+        if ($user->id === $request->user()->id) {
+            return response()->json(['message' => 'Tidak bisa menghapus akun sendiri.'], 403);
         }
 
         $user->tokens()->delete();
