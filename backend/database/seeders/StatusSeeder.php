@@ -66,6 +66,52 @@ class StatusSeeder extends Seeder
             // Outlet
             ['konteks' => 'outlet', 'kode' => 'aktif', 'label' => 'Aktif'],
             ['konteks' => 'outlet', 'kode' => 'nonaktif', 'label' => 'Nonaktif'],
+
+            // Modul 5.1 — Order Cucian
+            ['konteks' => 'order_cucian', 'kode' => 'diproses', 'label' => 'Diproses'],
+            ['konteks' => 'order_cucian', 'kode' => 'selesai', 'label' => 'Selesai'],
+            ['konteks' => 'order_cucian', 'kode' => 'dibatalkan', 'label' => 'Dibatalkan'],
+
+            // Modul 5.2 — Permintaan Stok Outlet (header rollup)
+            ['konteks' => 'permintaan_stok_outlet', 'kode' => 'diajukan', 'label' => 'Diajukan'],
+            ['konteks' => 'permintaan_stok_outlet', 'kode' => 'disetujui', 'label' => 'Disetujui'],
+            ['konteks' => 'permintaan_stok_outlet', 'kode' => 'disetujui_sebagian', 'label' => 'Disetujui Sebagian'],
+            ['konteks' => 'permintaan_stok_outlet', 'kode' => 'ditolak', 'label' => 'Ditolak'],
+
+            // Modul 5.2 — Permintaan Stok Outlet Detail
+            ['konteks' => 'permintaan_stok_outlet_detail', 'kode' => 'diajukan', 'label' => 'Diajukan'],
+            ['konteks' => 'permintaan_stok_outlet_detail', 'kode' => 'disetujui', 'label' => 'Disetujui'],
+            ['konteks' => 'permintaan_stok_outlet_detail', 'kode' => 'disetujui_sebagian', 'label' => 'Disetujui Sebagian'],
+            ['konteks' => 'permintaan_stok_outlet_detail', 'kode' => 'ditolak', 'label' => 'Ditolak'],
+
+            // Modul 5.2 — Distribusi Outlet
+            ['konteks' => 'distribusi_outlet', 'kode' => 'dikirim', 'label' => 'Dikirim'],
+            ['konteks' => 'distribusi_outlet', 'kode' => 'dikirim_sebagian', 'label' => 'Dikirim Sebagian'],
+            ['konteks' => 'distribusi_outlet', 'kode' => 'diterima', 'label' => 'Diterima'],
+
+            // Modul 5.4 — Jadwal Service Mesin
+            ['konteks' => 'jadwal_service_mesin', 'kode' => 'menunggu_persetujuan', 'label' => 'Menunggu Persetujuan'],
+            ['konteks' => 'jadwal_service_mesin', 'kode' => 'ditolak', 'label' => 'Ditolak'],
+            ['konteks' => 'jadwal_service_mesin', 'kode' => 'disetujui', 'label' => 'Disetujui'],
+            ['konteks' => 'jadwal_service_mesin', 'kode' => 'selesai', 'label' => 'Selesai'],
+
+            // Modul 5.5 — Jadwal Shift Staf
+            ['konteks' => 'jadwal_shift_staf', 'kode' => 'belum_berjalan', 'label' => 'Belum Berjalan'],
+            ['konteks' => 'jadwal_shift_staf', 'kode' => 'berjalan', 'label' => 'Berjalan'],
+            ['konteks' => 'jadwal_shift_staf', 'kode' => 'selesai', 'label' => 'Selesai'],
+
+            // Modul 6.2 — Loyalti
+            ['konteks' => 'loyalti', 'kode' => 'menunggu_evaluasi', 'label' => 'Menunggu Evaluasi'],
+            ['konteks' => 'loyalti', 'kode' => 'memenuhi_target', 'label' => 'Memenuhi Target'],
+            ['konteks' => 'loyalti', 'kode' => 'tidak_memenuhi_target', 'label' => 'Tidak Memenuhi Target'],
+            ['konteks' => 'loyalti', 'kode' => 'menunggu_pencairan', 'label' => 'Menunggu Pencairan'],
+            ['konteks' => 'loyalti', 'kode' => 'diproses_pencairan', 'label' => 'Diproses Pencairan'],
+            ['konteks' => 'loyalti', 'kode' => 'selesai', 'label' => 'Selesai'],
+
+            // Modul 6.2 — Loyalti Pencairan
+            ['konteks' => 'loyalti_pencairan', 'kode' => 'diproses', 'label' => 'Diproses'],
+            ['konteks' => 'loyalti_pencairan', 'kode' => 'selesai', 'label' => 'Selesai'],
+            ['konteks' => 'loyalti_pencairan', 'kode' => 'gagal', 'label' => 'Gagal'],
         ];
 
         foreach ($statuses as $s) {
