@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { getStock } from '../../api/stocks';
 import PageHeader from '../../components/ui/PageHeader';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { formatQty } from '../../utils/format';
 
 export default function StockDetail() {
   const { type, id } = useParams();
@@ -35,7 +36,7 @@ export default function StockDetail() {
             <div className="flex justify-between"><dt className="text-gray-500">Kode</dt><dd>{stock.mesin?.kode_mesin || '-'}</dd></div>
             <div className="flex justify-between"><dt className="text-gray-500">Merk</dt><dd>{stock.mesin?.merk || '-'}</dd></div>
           </>}
-          <div className="flex justify-between pt-2 border-t"><dt className="text-gray-900 font-semibold">Stok Saat Ini</dt><dd className="text-xl font-bold text-wash-800">{stock.stok_saat_ini}</dd></div>
+          <div className="flex justify-between pt-2 border-t"><dt className="text-gray-900 font-semibold">Stok Saat Ini</dt><dd className="text-xl font-bold text-wash-800">{formatQty(stock.stok_saat_ini)}</dd></div>
         </dl>
       </div>
     </div>

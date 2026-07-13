@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
+use App\Models\Franchise;
+use App\Models\ManajerOperasional;
 use App\Models\User;
 use App\Models\Status;
 use Illuminate\Http\JsonResponse;
@@ -37,6 +39,16 @@ class UserController extends Controller
 
         $user = User::create($data);
 
+        // Auto-create Franchise record if role is franchise
+        if ($user->role?->kode === 'franchise') {
+            Franchise::firstOrCreate(['user_id' => $user->id]);
+        }
+
+        // Auto-create ManajerOperasional record if role is manager_outlet
+        if ($user->role?->kode === 'manager_outlet') {
+            ManajerOperasional::firstOrCreate(['user_id' => $user->id]);
+        }
+
         return response()->json([
             'message' => 'User berhasil dibuat.',
             'data'    => $this->formatUser($user->load(['role', 'status'])),
@@ -54,6 +66,16 @@ class UserController extends Controller
     {
         $user->update($request->validated());
 
+        // Auto-create Franchise record if role changed to franchise
+        if ($user->role?->kode === 'franchise') {
+            Franchise::firstOrCreate(['user_id' => $user->id]);
+        }
+
+        // Auto-create ManajerOperasional record if role changed to manager_outlet
+        if ($user->role?->kode === 'manager_outlet') {
+            ManajerOperasional::firstOrCreate(['user_id' => $user->id]);
+        }
+
         return response()->json([
             'message' => 'User berhasil diperbarui.',
             'data'    => $this->formatUser($user->fresh()->load(['role', 'status'])),
@@ -62,6 +84,10 @@ class UserController extends Controller
 
     public function destroy(User $user): JsonResponse
     {
+        if (in_array($user->role?->kode, ['admin_it', 'franchise', 'manager_outlet'])) {
+            return response()->json(['message' => 'User dengan role ini tidak dapat dihapus.'], 403);
+        }
+
         $user->tokens()->delete();
         $user->delete();
         return response()->json(['message' => 'User berhasil dihapus.']);

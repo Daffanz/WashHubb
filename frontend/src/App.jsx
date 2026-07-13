@@ -13,6 +13,8 @@ import RoleList from './pages/roles/RoleList';
 import RoleForm from './pages/roles/RoleForm';
 import SupplierList from './pages/suppliers/SupplierList';
 import SupplierForm from './pages/suppliers/SupplierForm';
+import SupplierStockPage from './pages/suppliers/SupplierStockPage';
+import SupplierStockDetail from './pages/suppliers/SupplierStockDetail';
 
 // Module 2
 import CategoryList from './pages/master/categories/CategoryList';
@@ -36,12 +38,45 @@ import ReceiptList from './pages/procurement/ReceiptList';
 import ReceiptForm from './pages/procurement/ReceiptForm';
 import ReceiptDetail from './pages/procurement/ReceiptDetail';
 import ReturnList from './pages/procurement/ReturnList';
+import ReturnForm from './pages/procurement/ReturnForm';
+import ReturnDetail from './pages/procurement/ReturnDetail';
 
 // Module 4
 import StockList from './pages/inventory/StockList';
 import StockDetail from './pages/inventory/StockDetail';
 import MutationList from './pages/inventory/MutationList';
 import MutationForm from './pages/inventory/MutationForm';
+
+// Module 5 — Operasional
+import OrderList from './pages/operasional/orders/OrderList';
+import OrderForm from './pages/operasional/orders/OrderForm';
+import OrderDetail from './pages/operasional/orders/OrderDetail';
+import PermintaanList from './pages/operasional/permintaan/PermintaanList';
+import PermintaanForm from './pages/operasional/permintaan/PermintaanForm';
+import PermintaanDetail from './pages/operasional/permintaan/PermintaanDetail';
+import DistribusiOutletList from './pages/operasional/distribusi/DistribusiList';
+import DistribusiOutletForm from './pages/operasional/distribusi/DistribusiForm';
+import DistribusiOutletDetail from './pages/operasional/distribusi/DistribusiDetail';
+import PenerimaanStokOutletList from './pages/operasional/penerimaan/PenerimaanList';
+import PenerimaanStokOutletDetail from './pages/operasional/penerimaan/PenerimaanDetail';
+import PenerimaanOutletForm from './pages/operasional/penerimaan/PenerimaanOutletForm';
+import JadwalServiceList from './pages/operasional/service/ServiceList';
+import JadwalServiceForm from './pages/operasional/service/ServiceForm';
+import JadwalServiceDetail from './pages/operasional/service/ServiceDetail';
+import ShiftList from './pages/operasional/shift/ShiftList';
+import ShiftForm from './pages/operasional/shift/ShiftForm';
+import ShiftDetail from './pages/operasional/shift/ShiftDetail';
+
+// Module 6 — Franchise
+import OutletList from './pages/franchise/outlets/OutletList';
+import OutletForm from './pages/franchise/outlets/OutletForm';
+import OutletDetail from './pages/franchise/outlets/OutletDetail';
+import StokOutlet from './pages/inventory/StokOutlet';
+import StokOutletList from './pages/inventory/StokOutletList';
+import LoyaltiList from './pages/franchise/loyalti/LoyaltiList';
+import LoyaltiForm from './pages/franchise/loyalti/LoyaltiForm';
+import LoyaltiDetail from './pages/franchise/loyalti/LoyaltiDetail';
+
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -68,6 +103,8 @@ export default function App() {
         <Route path="suppliers" element={<SupplierList />} />
         <Route path="suppliers/create" element={<SupplierForm />} />
         <Route path="suppliers/:id/edit" element={<SupplierForm />} />
+        <Route path="suppliers/stock" element={<SupplierStockPage />} />
+        <Route path="suppliers/stock/:id" element={<SupplierStockDetail />} />
         {/* Module 2 */}
         <Route path="master/categories" element={<CategoryList />} />
         <Route path="master/categories/create" element={<CategoryForm />} />
@@ -94,11 +131,43 @@ export default function App() {
         <Route path="procurement/receipts/create" element={<ReceiptForm />} />
         <Route path="procurement/receipts/:id" element={<ReceiptDetail />} />
         <Route path="procurement/returns" element={<ReturnList />} />
+        <Route path="procurement/returns/create" element={<ReturnForm />} />
+        <Route path="procurement/returns/:id" element={<ReturnDetail />} />
         {/* Module 4 */}
         <Route path="inventory/stocks" element={<StockList />} />
         <Route path="inventory/stocks/:type/:id" element={<StockDetail />} />
+        <Route path="inventory/stok-outlet" element={<StokOutletList />} />
         <Route path="inventory/mutations" element={<MutationList />} />
         <Route path="inventory/mutations/create" element={<MutationForm />} />
+        {/* Module 5 — Operasional */}
+        <Route path="operasional/orders" element={<OrderList />} />
+        <Route path="operasional/orders/create" element={<OrderForm />} />
+        <Route path="operasional/orders/:id" element={<OrderDetail />} />
+        <Route path="operasional/permintaan-stok" element={<PermintaanList />} />
+        <Route path="operasional/permintaan-stok/create" element={<PermintaanForm />} />
+        <Route path="operasional/permintaan-stok/:id" element={<PermintaanDetail />} />
+        <Route path="operasional/distribusi-outlet" element={<DistribusiOutletList />} />
+        <Route path="operasional/distribusi-outlet/create" element={<DistribusiOutletForm />} />
+        <Route path="operasional/distribusi-outlet/:id" element={<DistribusiOutletDetail />} />
+        <Route path="operasional/penerimaan-stok-outlet" element={<PenerimaanStokOutletList />} />
+        <Route path="operasional/penerimaan-stok-outlet/create" element={<PenerimaanOutletForm />} />
+        <Route path="operasional/penerimaan-stok-outlet/:id" element={<PenerimaanStokOutletDetail />} />
+        <Route path="operasional/jadwal-service" element={<JadwalServiceList />} />
+        <Route path="operasional/jadwal-service/create" element={<JadwalServiceForm />} />
+        <Route path="operasional/jadwal-service/:id" element={<JadwalServiceDetail />} />
+        <Route path="operasional/jadwal-shift" element={<ShiftList />} />
+        <Route path="operasional/jadwal-shift/create" element={<ShiftForm />} />
+        <Route path="operasional/jadwal-shift/:id/edit" element={<ShiftForm />} />
+        <Route path="operasional/jadwal-shift/:id" element={<ShiftDetail />} />
+        {/* Module 6 — Franchise */}
+        <Route path="franchise/outlets" element={<OutletList />} />
+        <Route path="franchise/outlets/create" element={<OutletForm />} />
+        <Route path="franchise/outlets/:id/edit" element={<OutletForm />} />
+        <Route path="franchise/outlets/:id" element={<OutletDetail />} />
+        <Route path="franchise/outlets/:id/stok" element={<StokOutlet />} />
+        <Route path="franchise/loyalti" element={<LoyaltiList />} />
+        <Route path="franchise/loyalti/create" element={<LoyaltiForm />} />
+        <Route path="franchise/loyalti/:id" element={<LoyaltiDetail />} />
       </Route>
     </Routes>
   );

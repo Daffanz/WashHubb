@@ -11,6 +11,7 @@ use App\Models\BahanBaku;
 use App\Models\JenisLayanan;
 use App\Models\JenisLayananBahanBaku;
 use App\Models\Mesin;
+use App\Models\Franchise;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -56,6 +57,32 @@ class TestDataSeeder extends Seeder
             'no_telp' => '085555555555', 'role_id' => Role::where('kode', 'manager_outlet')->first()->id,
             'status_id' => $aktifStatus?->id,
         ]);
+
+        // ==========================================
+        // FRANCHISE USERS — 3 franchise
+        // ==========================================
+        $franchiseRole = Role::where('kode', 'franchise')->first();
+
+        $franchise1 = User::firstOrCreate(['email' => 'franchise1@washhub.com'], [
+            'nama' => 'Franchise Bandung', 'password' => Hash::make('password'),
+            'no_telp' => '086666666661', 'role_id' => $franchiseRole->id,
+            'status_id' => $aktifStatus?->id,
+        ]);
+        Franchise::firstOrCreate(['user_id' => $franchise1->id]);
+
+        $franchise2 = User::firstOrCreate(['email' => 'franchise2@washhub.com'], [
+            'nama' => 'Franchise Surabaya', 'password' => Hash::make('password'),
+            'no_telp' => '086666666662', 'role_id' => $franchiseRole->id,
+            'status_id' => $aktifStatus?->id,
+        ]);
+        Franchise::firstOrCreate(['user_id' => $franchise2->id]);
+
+        $franchise3 = User::firstOrCreate(['email' => 'franchise3@washhub.com'], [
+            'nama' => 'Franchise Jakarta', 'password' => Hash::make('password'),
+            'no_telp' => '086666666663', 'role_id' => $franchiseRole->id,
+            'status_id' => $aktifStatus?->id,
+        ]);
+        Franchise::firstOrCreate(['user_id' => $franchise3->id]);
 
         // ==========================================
         // SUPPLIER PROFILES
@@ -202,5 +229,38 @@ class TestDataSeeder extends Seeder
         $this->command->info('  supplier_bb@washhub.com / password (Supplier Bahan Baku)');
         $this->command->info('  supplier_ms@washhub.com / password (Supplier Mesin)');
         $this->command->info('  manager@washhub.com / password (Manager Outlet)');
+
+        // ==========================================
+        // PO BAHAN BAKU (diajukan)
+        // ==========================================
+        $diajukan = Status::where('konteks', 'purchase_order')->where('kode', 'diajukan')->first();
+        $itemDiajukan = Status::where('konteks', 'purchase_order_item')->where('kode', 'disetujui')->first();
+
+        $poBB = \App\Models\PurchaseOrder::create([
+            'supplier_id' => $supBB->id,
+            'dibuat_oleh_id' => $procurement->id,
+            'jenis_po' => 'bahan_baku',
+            'total_nilai' => (100 * 25000) + (50 * 15000),
+            'status_id' => $diajukan?->id,
+        ]);
+        \App\Models\PurchaseOrderItemBahanBaku::create(['po_id' => $poBB->id, 'bahan_baku_id' => $rinso->id, 'jumlah' => 100, 'harga_satuan' => 25000, 'status_id' => $itemDiajukan?->id]);
+        \App\Models\PurchaseOrderItemBahanBaku::create(['po_id' => $poBB->id, 'bahan_baku_id' => $molto->id, 'jumlah' => 50, 'harga_satuan' => 15000, 'status_id' => $itemDiajukan?->id]);
+
+        // ==========================================
+        // PO MESIN (diajukan)
+        // ==========================================
+        $poMesin = \App\Models\PurchaseOrder::create([
+            'supplier_id' => $supMesin->id,
+            'dibuat_oleh_id' => $procurement->id,
+            'jenis_po' => 'mesin',
+            'total_nilai' => (2 * 8500000) + (1 * 6500000),
+            'status_id' => $diajukan?->id,
+        ]);
+        \App\Models\PurchaseOrderItemMesin::create(['po_id' => $poMesin->id, 'mesin_id' => $samsung->id, 'jumlah' => 2, 'harga_satuan' => 8500000, 'status_id' => $itemDiajukan?->id]);
+        \App\Models\PurchaseOrderItemMesin::create(['po_id' => $poMesin->id, 'mesin_id' => $lg->id, 'jumlah' => 1, 'harga_satuan' => 6500000, 'status_id' => $itemDiajukan?->id]);
+
+        $this->command->info('PO:');
+        $this->command->info("  {$poBB->nomor_po} - Bahan Baku (Rinso 100kg + Molto 50ml) - Status: diajukan");
+        $this->command->info("  {$poMesin->nomor_po} - Mesin (Samsung 2 + LG 1) - Status: diajukan");
     }
 }

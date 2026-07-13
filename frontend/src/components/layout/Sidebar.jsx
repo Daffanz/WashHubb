@@ -3,20 +3,43 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 
 const menuItems = [
-  { label: 'Dashboard', to: '/dashboard', permission: 'user-list', group: 'Umum' },
+  // Umum — semua role
+  { label: 'Dashboard', to: '/dashboard', group: 'Umum' },
+
+  // Akun — admin_it only (permission-based)
   { label: 'Users', to: '/users', permission: 'user-list', group: 'Akun' },
   { label: 'Roles', to: '/roles', permission: 'role-list', group: 'Akun' },
   { label: 'Suppliers', to: '/suppliers', permission: 'supplier-list', group: 'Akun' },
+  { label: 'Stok Supplier', to: '/suppliers/stock', permission: 'supplier-stock-manage', group: 'Stok Supplier' },
+
+  // Data Master — admin_it, franchisor (permission-based)
   { label: 'Categories', to: '/master/categories', permission: 'category-list', group: 'Data Master' },
   { label: 'Materials', to: '/master/materials', permission: 'material-list', group: 'Data Master' },
   { label: 'Services', to: '/master/services', permission: 'service-list', group: 'Data Master' },
   { label: 'Machines', to: '/master/machines', permission: 'machine-list', group: 'Data Master' },
+
+  // Pengadaan — admin_it, procurement, supplier, franchisor
   { label: 'Purchase Orders', to: '/procurement/purchase-orders', permission: 'po-list', group: 'Pengadaan' },
   { label: 'Distributions', to: '/procurement/distributions', permission: 'distribution-list', group: 'Pengadaan' },
   { label: 'Receipts', to: '/procurement/receipts', permission: 'receipt-list', group: 'Pengadaan' },
   { label: 'Returns', to: '/procurement/returns', permission: 'retur-list', group: 'Pengadaan' },
-  { label: 'Stocks', to: '/inventory/stocks', permission: 'stock-list', group: 'Inventory' },
-  { label: 'Mutations', to: '/inventory/mutations', permission: 'mutation-list', group: 'Inventory' },
+  { label: 'Distribusi Outlet', to: '/operasional/distribusi-outlet', roles: ['admin_it', 'procurement', 'franchisor'], group: 'Pengadaan' },
+
+  // Inventory — admin_it, procurement, supplier, manager_outlet
+  { label: 'Stok Perusahaan', to: '/inventory/stocks', permission: 'stock-list', group: 'Inventory' },
+  { label: 'Stok Outlet', to: '/inventory/stok-outlet', roles: ['admin_it', 'manager_outlet', 'franchisor', 'franchise', 'procurement'], group: 'Inventory' },
+  { label: 'Mutasi Barang', to: '/inventory/mutations', permission: 'mutation-list', group: 'Inventory' },
+
+  // Operasional — admin_it, manager_outlet, franchisor, franchise, procurement (view only)
+  { label: 'Orders', to: '/operasional/orders', roles: ['admin_it', 'manager_outlet', 'franchisor', 'franchise'], group: 'Operasional' },
+  { label: 'Permintaan Stok', to: '/operasional/permintaan-stok', roles: ['admin_it', 'manager_outlet', 'franchisor', 'franchise', 'procurement'], group: 'Operasional' },
+  { label: 'Penerimaan Stok Outlet', to: '/operasional/penerimaan-stok-outlet', roles: ['admin_it', 'manager_outlet', 'franchisor', 'franchise'], group: 'Operasional' },
+  { label: 'Jadwal Service', to: '/operasional/jadwal-service', roles: ['admin_it', 'manager_outlet', 'franchisor', 'franchise'], group: 'Operasional' },
+  { label: 'Jadwal Shift', to: '/operasional/jadwal-shift', roles: ['admin_it', 'manager_outlet', 'franchisor', 'franchise'], group: 'Operasional' },
+
+  // Franchise — admin_it, franchisor, franchise
+  { label: 'Outlets', to: '/franchise/outlets', roles: ['admin_it', 'franchisor', 'franchise'], group: 'Franchise' },
+  { label: 'Loyalti', to: '/franchise/loyalti', roles: ['admin_it', 'franchisor', 'franchise'], group: 'Franchise' },
 ];
 
 const iconMap = {
@@ -34,13 +57,28 @@ const iconMap = {
   Returns: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" /></svg>,
   Stocks: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>,
   Mutations: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>,
+  Orders: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg>,
+  'Permintaan Stok': <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>,
+  'Distribusi Outlet': <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0H21a.75.75 0 00.75-.75V11.25a3 3 0 00-3-3h-1.5l-1.72-4.575A1.5 1.5 0 0014.87 2.25H9.13a1.5 1.5 0 00-1.43 1.05L6 7.5H3.75a3 3 0 00-3 3v7.125c0 .621.504 1.125 1.125 1.125h14.25" /></svg>,
+  'Jadwal Service': <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.42 15.17l-5.384 3.09a.75.75 0 01-1.06-.78l.94-6.02a.75.75 0 00-.27-.79L2.25 8.25m9.17 6.92l5.384 3.09a.75.75 0 001.06-.78l-.94-6.02a.75.75 0 00.27-.79l2.18-3.13" /></svg>,
+  'Jadwal Shift': <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  'Penerimaan Stok Outlet': <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m16.5 0V12a2.25 2.25 0 01-2.25 2.25h-3m-11.25 0V12a2.25 2.25 0 012.25-2.25h3m0 0V3.75a.75.75 0 01.75-.75h4.5a.75.75 0 01.75.75V7.5m-6 3h6" /></svg>,
+  Outlets: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3H21" /></svg>,
+  'Stok Outlet': <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>,
+  Loyalti: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>,
 };
 
 export default function Sidebar({ onClose }) {
   const { user } = useAuth();
   const perms = user?.permissions || [];
 
-  const visibleItems = menuItems.filter((item) => perms.includes(item.permission));
+  const visibleItems = menuItems.filter((item) => {
+    if (item.permission && !perms.includes(item.permission)) return false;
+    if (item.roles && !item.roles.includes(user?.role?.kode)) return false;
+    // Hide Data Master group for supplier role
+    if (item.group === 'Data Master' && user?.role?.kode === 'supplier') return false;
+    return true;
+  });
 
   const groups = {};
   visibleItems.forEach((item) => {
@@ -50,12 +88,7 @@ export default function Sidebar({ onClose }) {
 
   return (
     <div className="flex flex-col h-full bg-wash-900 text-white">
-      <div className="flex items-center gap-3 px-6 py-5 border-b border-wash-800">
-        <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center">
-          <svg className="w-6 h-6 text-wash-900" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17a1 1 0 001 1h6a1 1 0 001-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7zm2 14h-4v-1h4v1zm0-2h-4v-1h4v1zm1.15-4.95L14 11.12V15h-4v-3.88l-1.15-1.07A4.993 4.993 0 017 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.05z" />
-          </svg>
-        </div>
+      <div className="flex items-center px-6 py-5 border-b border-wash-800">
         <span className="text-lg font-bold tracking-tight">WashHub</span>
         <button onClick={onClose} className="ml-auto lg:hidden p-1 rounded-md hover:bg-wash-800 transition">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>

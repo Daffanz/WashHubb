@@ -20,7 +20,7 @@ export default function UserForm() {
   const [fetching, setFetching] = useState(isEdit);
 
   useEffect(() => {
-    getRoles({ per_page: 100 }).then((res) => setRoles(res.data.data.map(r => ({ value: r.id, label: `${r.label} (${r.kode})` }))));
+    getRoles({ per_page: 100 }).then((res) => setRoles(res.data.data.filter(r => r.kode !== 'admin_it').map(r => ({ value: r.id, label: `${r.label} (${r.kode})` }))));
     if (isEdit) {
       getUser(id).then((res) => {
         const u = res.data.data;

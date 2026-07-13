@@ -16,10 +16,10 @@ class RolePermissionSeeder extends Seeder
         $roles = [
             ['kode' => 'admin_it', 'label' => 'Admin IT'],
             ['kode' => 'franchisor', 'label' => 'Franchisor'],
+            ['kode' => 'franchise', 'label' => 'Franchise'],
             ['kode' => 'procurement', 'label' => 'Tim Pengadaan'],
             ['kode' => 'supplier', 'label' => 'Supplier'],
             ['kode' => 'manager_outlet', 'label' => 'Manager Outlet'],
-            ['kode' => 'manajer_operasional', 'label' => 'Manajer Operasional'],
         ];
 
         foreach ($roles as $r) {
@@ -72,7 +72,7 @@ class RolePermissionSeeder extends Seeder
             ['kode' => 'retur-validate', 'nama' => 'Validasi Retur', 'modul' => 'pengadaan'],
             ['kode' => 'stock-list', 'nama' => 'Lihat Stok', 'modul' => 'inventory'],
             ['kode' => 'stock-view', 'nama' => 'Detail Stok', 'modul' => 'inventory'],
-            ['kode' => 'stock-manage', 'nama' => 'Kelola Stok', 'modul' => 'inventory'],
+            ['kode' => 'supplier-stock-manage', 'nama' => 'Kelola Stok Supplier', 'modul' => 'supplier'],
             ['kode' => 'mutation-list', 'nama' => 'Lihat Mutasi', 'modul' => 'inventory'],
             ['kode' => 'mutation-create', 'nama' => 'Buat Mutasi', 'modul' => 'inventory'],
             ['kode' => 'outlet-list', 'nama' => 'Lihat Outlet', 'modul' => 'outlet'],
@@ -95,13 +95,19 @@ class RolePermissionSeeder extends Seeder
             'material-list', 'material-create', 'material-edit', 'material-delete',
             'service-list', 'service-create', 'service-edit', 'service-delete',
             'machine-list', 'machine-create', 'machine-edit', 'machine-delete',
+            'outlet-list', 'outlet-create', 'outlet-edit',
+        ])->pluck('id'));
+
+        $franchise = Role::where('kode', 'franchise')->first();
+        $franchise->permissions()->sync(Permission::whereIn('kode', [
+            'outlet-list', 'stock-list', 'stock-view', 'mutation-list',
         ])->pluck('id'));
 
         $procurement = Role::where('kode', 'procurement')->first();
         $procurement->permissions()->sync(Permission::whereIn('kode', [
             'supplier-list', 'supplier-create', 'supplier-edit',
             'po-list', 'po-create', 'po-edit', 'po-delete', 'po-kirim',
-            'distribution-list', 'distribution-create',
+            'distribution-list',
             'receipt-list', 'receipt-create',
             'retur-list', 'retur-create', 'retur-validate',
             'stock-list', 'stock-view',
@@ -112,14 +118,16 @@ class RolePermissionSeeder extends Seeder
         $supplier->permissions()->sync(Permission::whereIn('kode', [
             'po-list', 'po-validate',
             'distribution-list', 'distribution-create',
-            'stock-list', 'stock-view', 'stock-manage',
-            'mutation-list', 'mutation-create',
+            'supplier-stock-manage',
+            'retur-list',
+            'material-list', 'machine-list',
         ])->pluck('id'));
 
         $managerOutlet = Role::where('kode', 'manager_outlet')->first();
         $managerOutlet->permissions()->sync(Permission::whereIn('kode', [
             'stock-list', 'stock-view',
             'mutation-list', 'mutation-create',
+            'material-list', 'machine-list',
         ])->pluck('id'));
 
         // Create admin user

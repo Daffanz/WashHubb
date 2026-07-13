@@ -16,8 +16,18 @@ use App\Http\Controllers\Api\Procurement\PenerimaanController;
 use App\Http\Controllers\Api\Procurement\ReturController;
 use App\Http\Controllers\Api\SupplierStockController;
 use App\Http\Controllers\Api\Inventory\StockController;
+use App\Http\Controllers\Api\Inventory\StokOutletController;
 use App\Http\Controllers\Api\Inventory\MutasiController;
 use App\Http\Controllers\Api\ForgotPasswordController;
+use App\Http\Controllers\Api\Operasional\OrderCucianController;
+use App\Http\Controllers\Api\Operasional\PermintaanStokController;
+use App\Http\Controllers\Api\Operasional\DistribusiOutletController;
+use App\Http\Controllers\Api\Operasional\PenerimaanStokOutletController;
+use App\Http\Controllers\Api\Operasional\JadwalServiceController;
+use App\Http\Controllers\Api\Operasional\JadwalShiftController;
+use App\Http\Controllers\Api\Franchise\OutletController;
+use App\Http\Controllers\Api\Franchise\LoyaltiController;
+use App\Http\Controllers\Api\Dashboard\DashboardController;
 use Illuminate\Support\Facades\Route;
 
 // Auth (public)
@@ -97,27 +107,34 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('permission:po-list')->get('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show']);
         Route::middleware('permission:po-edit')->put('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update']);
         Route::middleware('permission:po-delete')->delete('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'destroy']);
+        // UC-30: Kirim PO ke Supplier
         Route::middleware('permission:po-kirim')->patch('/purchase-orders/{purchaseOrder}/kirim', [PurchaseOrderController::class, 'kirim']);
-        Route::middleware('permission:po-validate')->patch('/purchase-orders/{purchaseOrder}/validate', [PurchaseOrderController::class, 'validatePo']);
-        Route::middleware('permission:po-validate')->patch('/purchase-orders/{purchaseOrder}/items/{itemId}/validate', [PurchaseOrderController::class, 'validateItem']);
+        // UC-31: Supplier validasi per-item
+        Route::middleware('permission:po-validate')->patch('/purchase-orders/{purchaseOrder}/validate', [PurchaseOrderController::class, 'validate']);
 
-        // Supplier Stock
-        Route::get('/supplier-stocks', [SupplierStockController::class, 'index']);
-        Route::post('/supplier-stocks', [SupplierStockController::class, 'store']);
-        Route::delete('/supplier-stocks/{id}', [SupplierStockController::class, 'destroy']);
+        // Supplier Stock (UC-39/40)
+        Route::middleware('permission:supplier-stock-manage')->get('/supplier-stocks', [SupplierStockController::class, 'index']);
+        Route::middleware('permission:supplier-stock-manage')->get('/supplier-stocks/{id}', [SupplierStockController::class, 'show']);
+        Route::middleware('permission:supplier-stock-manage')->post('/supplier-stocks', [SupplierStockController::class, 'store']);
+        Route::middleware('permission:supplier-stock-manage')->put('/supplier-stocks/{id}', [SupplierStockController::class, 'update']);
+        Route::middleware('permission:supplier-stock-manage')->delete('/supplier-stocks/{id}', [SupplierStockController::class, 'destroy']);
 
+        // UC-35/36: Distribusi
         Route::middleware('permission:distribution-list')->get('/distributions', [DistribusiController::class, 'index']);
         Route::middleware('permission:distribution-create')->post('/distributions', [DistribusiController::class, 'store']);
         Route::middleware('permission:distribution-list')->get('/distributions/{distribusi}', [DistribusiController::class, 'show']);
+        Route::middleware('permission:receipt-create')->patch('/distributions/{distribusi}/diterima', [DistribusiController::class, 'diterima']);
 
+        // UC-34: Penerimaan
         Route::middleware('permission:receipt-list')->get('/receipts', [PenerimaanController::class, 'index']);
         Route::middleware('permission:receipt-create')->post('/receipts', [PenerimaanController::class, 'store']);
         Route::middleware('permission:receipt-list')->get('/receipts/{penerimaan}', [PenerimaanController::class, 'show']);
 
-        // Retur
+        // UC-37/38: Retur
         Route::middleware('permission:retur-list')->get('/returns', [ReturController::class, 'index']);
         Route::middleware('permission:retur-create')->post('/returns', [ReturController::class, 'store']);
         Route::middleware('permission:retur-list')->get('/returns/{retur}', [ReturController::class, 'show']);
+        Route::middleware('permission:retur-list')->patch('/returns/{retur}/kirim-pengganti', [ReturController::class, 'kirimPengganti']);
         Route::middleware('permission:retur-validate')->patch('/returns/{retur}/confirm', [ReturController::class, 'confirm']);
     });
 
@@ -125,9 +142,85 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('inventory')->group(function () {
         Route::middleware('permission:stock-list')->get('/stocks', [StockController::class, 'index']);
         Route::middleware('permission:stock-view')->get('/stocks/{type}/{id}', [StockController::class, 'show']);
-        Route::middleware('permission:stock-manage')->post('/stocks', [StockController::class, 'store']);
+
+        // Stok Outlet
+        Route::get('/stok-outlet', [StokOutletController::class, 'index']);
 
         Route::middleware('permission:mutation-list')->get('/mutations', [MutasiController::class, 'index']);
         Route::middleware('permission:mutation-create')->post('/mutations', [MutasiController::class, 'store']);
+    });
+
+    // --- Modul 5: Operasional Laundry ---
+    Route::prefix('operasional')->group(function () {
+        // 5.1 Order Cucian
+        Route::get('/orders', [OrderCucianController::class, 'index']);
+        Route::post('/orders', [OrderCucianController::class, 'store']);
+        Route::get('/orders/{order}', [OrderCucianController::class, 'show']);
+        Route::patch('/orders/{order}', [OrderCucianController::class, 'update']);
+
+        // 5.2 Permintaan Stok Outlet
+        Route::get('/permintaan-stok', [PermintaanStokController::class, 'index']);
+        Route::post('/permintaan-stok', [PermintaanStokController::class, 'store']);
+        Route::get('/permintaan-stok/{permintaan}', [PermintaanStokController::class, 'show']);
+        Route::delete('/permintaan-stok/{permintaan}', [PermintaanStokController::class, 'destroy']);
+        Route::patch('/permintaan-stok/{permintaan}/validate', [PermintaanStokController::class, 'validateItems']);
+
+        // 5.2 Distribusi Outlet
+        Route::get('/distribusi-outlet', [DistribusiOutletController::class, 'index']);
+        Route::post('/distribusi-outlet', [DistribusiOutletController::class, 'store']);
+        Route::get('/distribusi-outlet/{distribusi}', [DistribusiOutletController::class, 'show']);
+        Route::patch('/distribusi-outlet/{distribusi}/terima', [DistribusiOutletController::class, 'terima']);
+
+        // 5.3 Penerimaan Stok Outlet
+        Route::get('/penerimaan-stok-outlet', [PenerimaanStokOutletController::class, 'index']);
+        Route::post('/penerimaan-stok-outlet', [PenerimaanStokOutletController::class, 'store']);
+        Route::get('/penerimaan-stok-outlet/{penerimaan}', [PenerimaanStokOutletController::class, 'show']);
+
+        // 5.4 Jadwal Service Mesin
+        Route::get('/jadwal-service', [JadwalServiceController::class, 'index']);
+        Route::post('/jadwal-service', [JadwalServiceController::class, 'store']);
+        Route::get('/jadwal-service/{jadwal}', [JadwalServiceController::class, 'show']);
+        Route::patch('/jadwal-service/{jadwal}/validate', [JadwalServiceController::class, 'validate']);
+        Route::patch('/jadwal-service/{jadwal}/complete', [JadwalServiceController::class, 'complete']);
+
+        // 5.5 Jadwal Shift Staf
+        Route::get('/jadwal-shift', [JadwalShiftController::class, 'index']);
+        Route::post('/jadwal-shift', [JadwalShiftController::class, 'store']);
+        Route::get('/jadwal-shift/{jadwal}', [JadwalShiftController::class, 'show']);
+        Route::put('/jadwal-shift/{jadwal}', [JadwalShiftController::class, 'update']);
+        Route::get('/jadwal-shift-history', [JadwalShiftController::class, 'history']);
+    });
+
+    // --- Modul 6: Manajemen Franchise ---
+    Route::prefix('franchise')->group(function () {
+        // 6.1 Outlet
+        Route::get('/outlets', [OutletController::class, 'index']);
+        Route::post('/outlets', [OutletController::class, 'store']);
+        Route::get('/outlets/{outlet}', [OutletController::class, 'show']);
+        Route::put('/outlets/{outlet}', [OutletController::class, 'update']);
+
+        // 6.2 Franchises (for dropdown)
+        Route::get('/franchises', [OutletController::class, 'franchises']);
+
+        // 6.3 Manajer Operasionals (for dropdown)
+        Route::get('/manajer-operasionals', [OutletController::class, 'manajerOperasionals']);
+
+        // 6.4 Loyalti
+        Route::get('/loyalti', [LoyaltiController::class, 'index']);
+        Route::post('/loyalti', [LoyaltiController::class, 'store']);
+        Route::get('/loyalti/{loyalti}', [LoyaltiController::class, 'show']);
+        Route::patch('/loyalti/{loyalti}/evaluate', [LoyaltiController::class, 'evaluate']);
+        Route::patch('/loyalti/{loyalti}/set-bonus', [LoyaltiController::class, 'setBonus']);
+        Route::patch('/loyalti/{loyalti}/cairkan', [LoyaltiController::class, 'cairkan']);
+        Route::patch('/loyalti/{loyalti}/confirm-pencairan', [LoyaltiController::class, 'confirmPencairan']);
+    });
+
+    // --- Modul 7: Dashboard ---
+    Route::prefix('dashboard')->group(function () {
+        Route::get('/franchisor', [DashboardController::class, 'franchisor']);
+        Route::get('/pengadaan', [DashboardController::class, 'pengadaan']);
+        Route::get('/supplier', [DashboardController::class, 'supplier']);
+        Route::get('/franchisee', [DashboardController::class, 'franchisee']);
+        Route::get('/manajer-outlet', [DashboardController::class, 'manajerOutlet']);
     });
 });

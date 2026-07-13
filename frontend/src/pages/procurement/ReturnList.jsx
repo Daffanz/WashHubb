@@ -2,11 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import PageHeader from '../../components/ui/PageHeader';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import DataTable from '../../components/ui/DataTable';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { formatDateTime } from '../../utils/format';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function ReturnList() {
+  const { user } = useAuth();
+  const canCreate = user?.role?.kode === 'procurement' || user?.role?.kode === 'admin_it';
   const [data, setData] = useState([]);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,37 +27,28 @@ export default function ReturnList() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  if (loading) return <LoadingSpinner />;
+  const columns = [
+    { label: 'ID', render: (r) => <span className="font-medium">#{r.id}</span> },
+    { label: 'PO', render: (r) => r.po?.nomor_po || '-' },
+    { label: 'Supplier', render: (r) => r.po?.supplier || '-' },
+    { label: 'Tanggal', render: (r) => formatDateTime(r.tanggal_retur) },
+    { label: 'Status', render: (r) => <StatusBadge status={r.status?.label} color={r.status?.kode === 'selesai' ? 'green' : r.status?.kode === 'pengganti_dikirim' ? 'blue' : 'yellow'} /> },
+    { label: 'Items', render: (r) => {
+      const total = (r.detail_bahan_baku?.length || 0) + (r.detail_mesin?.length || 0);
+      const selesai = (r.detail_bahan_baku?.filter(d => d.status?.kode === 'selesai').length || 0) + (r.detail_mesin?.filter(d => d.status?.kode === 'selesai').length || 0);
+      return <span className="text-xs">{selesai}/{total}</span>;
+    }},
+  ];
 
   return (
     <div>
-      <PageHeader title="Retur Barang" breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Pengadaan' }, { label: 'Retur' }]} />
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">ID</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Tanggal Retur</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Detail Bahan</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Detail Mesin</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {data.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-12 text-center text-sm text-gray-400">Belum ada retur</td></tr>
-            ) : data.map((r) => (
-              <tr key={r.id} className="hover:bg-gray-50/50">
-                <td className="px-4 py-3 text-sm font-medium">#{r.id}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{formatDateTime(r.tanggal_retur)}</td>
-                <td className="px-4 py-3"><StatusBadge status={r.status?.label} color={r.status?.kode === 'selesai' ? 'green' : r.status?.kode === 'pengganti_dikirim' ? 'blue' : 'yellow'} /></td>
-                <td className="px-4 py-3 text-sm text-gray-600">{r.detail_bahan_baku?.length || 0} item</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{r.detail_mesin?.length || 0} item</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <PageHeader title="Retur Barang" breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Pengadaan' }, { label: 'Retur' }]}
+        actionLabel={canCreate ? 'Buat Retur' : null} actionTo={canCreate ? '/procurement/returns/create' : null} />
+      <DataTable columns={columns} data={data} loading={loading} meta={meta} onPageChange={(p) => setPage(p)}
+        actions={(row) => (
+          <Link to={`/procurement/returns/${row.id}`} className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded hover:bg-blue-50">Detail</Link>
+        )}
+      />
     </div>
   );
 }

@@ -11,9 +11,10 @@ use Illuminate\Http\Request;
 
 class MesinController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $mesins = Mesin::with('status')->paginate(15);
+        $perPage = (int) $request->input('per_page', 15);
+        $mesins = Mesin::with('status')->paginate($perPage);
 
         return response()->json([
             'data' => $mesins->map(fn ($m) => $this->formatMesin($m)),
