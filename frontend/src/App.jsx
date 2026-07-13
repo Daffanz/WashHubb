@@ -47,6 +47,38 @@ import StockDetail from './pages/inventory/StockDetail';
 import MutationList from './pages/inventory/MutationList';
 import MutationForm from './pages/inventory/MutationForm';
 
+// Module 5 — Operasional
+import OrderList from './pages/operasional/orders/OrderList';
+import OrderForm from './pages/operasional/orders/OrderForm';
+import OrderDetail from './pages/operasional/orders/OrderDetail';
+import PermintaanList from './pages/operasional/permintaan/PermintaanList';
+import PermintaanForm from './pages/operasional/permintaan/PermintaanForm';
+import PermintaanDetail from './pages/operasional/permintaan/PermintaanDetail';
+import DistribusiOutletList from './pages/operasional/distribusi/DistribusiList';
+import DistribusiOutletForm from './pages/operasional/distribusi/DistribusiForm';
+import DistribusiOutletDetail from './pages/operasional/distribusi/DistribusiDetail';
+import JadwalServiceList from './pages/operasional/service/ServiceList';
+import JadwalServiceForm from './pages/operasional/service/ServiceForm';
+import JadwalServiceDetail from './pages/operasional/service/ServiceDetail';
+import ShiftList from './pages/operasional/shift/ShiftList';
+import ShiftForm from './pages/operasional/shift/ShiftForm';
+import ShiftDetail from './pages/operasional/shift/ShiftDetail';
+
+// Module 6 — Franchise
+import OutletList from './pages/franchise/outlets/OutletList';
+import OutletForm from './pages/franchise/outlets/OutletForm';
+import OutletDetail from './pages/franchise/outlets/OutletDetail';
+import LoyaltiList from './pages/franchise/loyalti/LoyaltiList';
+import LoyaltiForm from './pages/franchise/loyalti/LoyaltiForm';
+import LoyaltiDetail from './pages/franchise/loyalti/LoyaltiDetail';
+
+// Module 7 — Dashboard
+import FranchisorDashboard from './pages/dashboard/FranchisorDashboard';
+import PengadaanDashboard from './pages/dashboard/PengadaanDashboard';
+import SupplierDashboard from './pages/dashboard/SupplierDashboard';
+import FranchiseeDashboard from './pages/dashboard/FranchiseeDashboard';
+import ManajerOutletDashboard from './pages/dashboard/ManajerOutletDashboard';
+
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-wash-900"></div></div>;
@@ -107,6 +139,37 @@ export default function App() {
         <Route path="inventory/stocks/:type/:id" element={<StockDetail />} />
         <Route path="inventory/mutations" element={<MutationList />} />
         <Route path="inventory/mutations/create" element={<MutationForm />} />
+        {/* Module 5 — Operasional */}
+        <Route path="operasional/orders" element={<OrderList />} />
+        <Route path="operasional/orders/create" element={<OrderForm />} />
+        <Route path="operasional/orders/:id" element={<OrderDetail />} />
+        <Route path="operasional/permintaan-stok" element={<PermintaanList />} />
+        <Route path="operasional/permintaan-stok/create" element={<PermintaanForm />} />
+        <Route path="operasional/permintaan-stok/:id" element={<PermintaanDetail />} />
+        <Route path="operasional/distribusi-outlet" element={<DistribusiOutletList />} />
+        <Route path="operasional/distribusi-outlet/create" element={<DistribusiOutletForm />} />
+        <Route path="operasional/distribusi-outlet/:id" element={<DistribusiOutletDetail />} />
+        <Route path="operasional/jadwal-service" element={<JadwalServiceList />} />
+        <Route path="operasional/jadwal-service/create" element={<JadwalServiceForm />} />
+        <Route path="operasional/jadwal-service/:id" element={<JadwalServiceDetail />} />
+        <Route path="operasional/jadwal-shift" element={<ShiftList />} />
+        <Route path="operasional/jadwal-shift/create" element={<ShiftForm />} />
+        <Route path="operasional/jadwal-shift/:id/edit" element={<ShiftForm />} />
+        <Route path="operasional/jadwal-shift/:id" element={<ShiftDetail />} />
+        {/* Module 6 — Franchise */}
+        <Route path="franchise/outlets" element={<OutletList />} />
+        <Route path="franchise/outlets/create" element={<OutletForm />} />
+        <Route path="franchise/outlets/:id/edit" element={<OutletForm />} />
+        <Route path="franchise/outlets/:id" element={<OutletDetail />} />
+        <Route path="franchise/loyalti" element={<LoyaltiList />} />
+        <Route path="franchise/loyalti/create" element={<LoyaltiForm />} />
+        <Route path="franchise/loyalti/:id" element={<LoyaltiDetail />} />
+        {/* Module 7 — Dashboard */}
+        <Route path="dashboard/franchisor" element={<FranchisorDashboard />} />
+        <Route path="dashboard/pengadaan" element={<PengadaanDashboard />} />
+        <Route path="dashboard/supplier" element={<SupplierDashboard />} />
+        <Route path="dashboard/franchisee" element={<FranchiseeDashboard />} />
+        <Route path="dashboard/manajer-outlet" element={<ManajerOutletDashboard />} />
       </Route>
     </Routes>
   );
