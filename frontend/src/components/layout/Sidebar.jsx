@@ -10,7 +10,7 @@ const menuItems = [
   { label: 'Users', to: '/users', permission: 'user-list', group: 'Akun' },
   { label: 'Roles', to: '/roles', permission: 'role-list', group: 'Akun' },
   { label: 'Suppliers', to: '/suppliers', permission: 'supplier-list', group: 'Akun' },
-  { label: 'Stok Supplier', to: '/suppliers/stock', permission: 'supplier-stock-manage', group: 'Stok Supplier' },
+  { label: 'Stok Supplier', to: '/suppliers/stock', permission: 'supplier-stock-manage', roles: ['supplier'], group: 'Stok Supplier' },
 
   // Data Master — admin_it, franchisor (permission-based)
   { label: 'Categories', to: '/master/categories', permission: 'category-list', group: 'Data Master' },
