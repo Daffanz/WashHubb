@@ -16,6 +16,6 @@ class JenisLayanan extends Model
     public function materials()
     {
         return $this->belongsToMany(BahanBaku::class, 'jenis_layanan_bahan_bakus', 'jenis_layanan_id', 'bahan_baku_id')
-            ->withPivot('konsumsi_per_kg');
+            ->withPivot('jumlah_konsumsi');
     }
 }

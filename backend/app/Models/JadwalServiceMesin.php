@@ -8,7 +8,7 @@ class JadwalServiceMesin extends Model
 {
     protected $table = 'jadwal_service_mesins';
     protected $fillable = [
-        'detail_mesin_id', 'outlet_id', 'user_id', 'tanggal_pengajuan',
+        'mesin_id', 'outlet_id', 'user_id', 'tanggal_pengajuan',
         'tanggal_service', 'deskripsi', 'menunggu_mesin_bebas', 'status_id',
     ];
     protected function casts(): array
@@ -20,7 +20,7 @@ class JadwalServiceMesin extends Model
         ];
     }
 
-    public function detailMesin(): BelongsTo { return $this->belongsTo(DetailMesin::class); }
+    public function mesin(): BelongsTo { return $this->belongsTo(Mesin::class); }
     public function outlet(): BelongsTo { return $this->belongsTo(Outlet::class); }
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
     public function status(): BelongsTo { return $this->belongsTo(Status::class); }

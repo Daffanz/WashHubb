@@ -26,6 +26,7 @@ export default function OutletList() {
     { label: 'Kode', render: (r) => <span className="font-mono text-sm">{r.kode_outlet}</span> },
     { label: 'Alamat', render: (r) => <span className="text-gray-500 text-sm truncate max-w-xs block">{r.alamat}</span> },
     { label: 'Franchise', render: (r) => r.franchise?.user?.nama || '-' },
+    { label: 'Manager Outlet', render: (r) => r.manager_outlet?.nama || '-' },
     { label: 'Status', render: (r) => <StatusBadge status={r.status?.label} color={r.status?.kode === 'aktif' ? 'green' : 'red'} /> },
   ];
 

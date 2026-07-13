@@ -17,25 +17,25 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-class DistribusiOutletController extends Controller
+class PenerimaanStokOutletController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = DistribusiOutlet::with(['permintaanStokOutlet.outlet', 'status', 'details.bahanBaku']);
+        $query = PenerimaanOutlet::with(['distribusiOutlet.permintaanStokOutlet.outlet', 'distribusiOutlet.details.bahanBaku', 'distribusiOutlet.details.mesin', 'user', 'details.distribusiOutletDetail.bahanBaku', 'details.distribusiOutletDetail.mesin']);
 
         if ($outletId = $request->query('outlet_id')) {
-            $query->whereHas('permintaanStokOutlet', fn ($q) => $q->where('outlet_id', $outletId));
+            $query->whereHas('distribusiOutlet.permintaanStokOutlet', fn ($q) => $q->where('outlet_id', $outletId));
         }
 
-        $distribusis = $query->orderByDesc('created_at')->paginate(15);
+        $penerimaans = $query->orderByDesc('created_at')->paginate(15);
 
         return response()->json([
-            'data' => $distribusis->map(fn ($d) => $this->format($d)),
+            'data' => $penerimaans->map(fn ($p) => $this->format($p)),
             'meta' => [
-                'current_page' => $distribusis->currentPage(),
-                'last_page' => $distribusis->lastPage(),
-                'per_page' => $distribusis->perPage(),
-                'total' => $distribusis->total(),
+                'current_page' => $penerimaans->currentPage(),
+                'last_page' => $penerimaans->lastPage(),
+                'per_page' => $penerimaans->perPage(),
+                'total' => $penerimaans->total(),
             ],
         ]);
     }
@@ -43,75 +43,18 @@ class DistribusiOutletController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'permintaan_stok_outlet_id' => 'required|exists:permintaan_stok_outlets,id',
-            'tanggal_kirim' => 'required|date',
-            'items' => 'required|array|min:1',
-            'items.*.tipe_item' => 'required|in:bahan_baku,mesin',
-            'items.*.bahan_baku_id' => 'nullable|exists:bahan_bakus,id',
-            'items.*.mesin_id' => 'nullable|exists:mesins,id',
-            'items.*.jumlah_kirim' => 'required|numeric|min:0.0001',
-        ]);
-
-        // Validate that the correct ID is provided based on tipe_item
-        foreach ($request->items as $index => $item) {
-            if ($item['tipe_item'] === 'bahan_baku' && empty($item['bahan_baku_id'])) {
-                return response()->json(['message' => "Item {$index}: bahan_baku_id wajib diisi untuk tipe bahan_baku."], 422);
-            }
-            if ($item['tipe_item'] === 'mesin' && empty($item['mesin_id'])) {
-                return response()->json(['message' => "Item {$index}: mesin_id wajib diisi untuk tipe mesin."], 422);
-            }
-        }
-
-        $distribusi = DB::transaction(function () use ($request) {
-            $dikirim = Status::where('konteks', 'distribusi_outlet')->where('kode', 'dikirim')->first();
-
-            $distribusi = DistribusiOutlet::create([
-                'permintaan_stok_outlet_id' => $request->permintaan_stok_outlet_id,
-                'tanggal_kirim' => $request->tanggal_kirim,
-                'status_id' => $dikirim?->id,
-            ]);
-
-            foreach ($request->items as $item) {
-                DistribusiOutletDetail::create([
-                    'distribusi_outlet_id' => $distribusi->id,
-                    'bahan_baku_id' => $item['tipe_item'] === 'bahan_baku' ? $item['bahan_baku_id'] : null,
-                    'mesin_id' => $item['tipe_item'] === 'mesin' ? $item['mesin_id'] : null,
-                    'tipe_item' => $item['tipe_item'],
-                    'jumlah_kirim' => $item['jumlah_kirim'],
-                ]);
-            }
-
-            return $distribusi;
-        });
-
-        return response()->json([
-            'message' => 'Distribusi berhasil dibuat.',
-            'data' => $this->format($distribusi->fresh()->load(['permintaanStokOutlet.outlet', 'status', 'details.bahanBaku', 'details.mesin'])),
-        ], 201);
-    }
-
-    public function show(DistribusiOutlet $distribusi): JsonResponse
-    {
-        $distribusi->load(['permintaanStokOutlet.outlet', 'status', 'details.bahanBaku', 'details.mesin', 'penerimaanOutlets.details']);
-        return response()->json(['data' => $this->format($distribusi)]);
-    }
-
-    /**
-     * Manajer Outlet konfirmasi penerimaan
-     */
-    public function terima(Request $request, DistribusiOutlet $distribusi): JsonResponse
-    {
-        $request->validate([
+            'distribusi_outlet_id' => 'required|exists:distribusi_outlets,id',
             'items' => 'required|array|min:1',
             'items.*.distribusi_outlet_detail_id' => 'required|exists:distribusi_outlet_details,id',
             'items.*.qty_diterima' => 'required|numeric|min:0.0001',
         ]);
 
-        DB::transaction(function () use ($request, $distribusi) {
-            $outletId = $distribusi->permintaanStokOutlet->outlet_id;
+        $distribusi = DistribusiOutlet::findOrFail($request->distribusi_outlet_id);
+        $outletId = $distribusi->permintaanStokOutlet->outlet_id;
 
+        DB::transaction(function () use ($request, $distribusi, $outletId) {
             $penerimaan = PenerimaanOutlet::create([
-                'distribusi_outlet_id' => $distribusi->id,
+                'distribusi_outlet_id' => $request->distribusi_outlet_id,
                 'user_id' => $request->user()->id,
                 'tanggal_terima' => now(),
             ]);
@@ -182,7 +125,13 @@ class DistribusiOutletController extends Controller
             $this->updateDistribusiStatus($distribusi);
         });
 
-        return response()->json(['message' => 'Penerimaan berhasil dicatat. Stok outlet bertambah, stok pusat berkurang.']);
+        return response()->json(['message' => 'Penerimaan berhasil dicatat. Stok outlet bertambah, stok pusat berkurang.'], 201);
+    }
+
+    public function show(PenerimaanOutlet $penerimaan): JsonResponse
+    {
+        $penerimaan->load(['distribusiOutlet.permintaanStokOutlet.outlet', 'distribusiOutlet.details.bahanBaku', 'distribusiOutlet.details.mesin', 'user', 'details.distribusiOutletDetail.bahanBaku', 'details.distribusiOutletDetail.mesin']);
+        return response()->json(['data' => $this->format($penerimaan)]);
     }
 
     private function updateDistribusiStatus(DistribusiOutlet $distribusi): void
@@ -203,24 +152,26 @@ class DistribusiOutletController extends Controller
         $distribusi->update(['status_id' => $status?->id]);
     }
 
-    private function format($d): array
+    private function format($p): array
     {
         return [
-            'id' => $d->id,
-            'permintaan' => $d->permintaanStokOutlet ? [
-                'id' => $d->permintaanStokOutlet->id,
-                'outlet' => $d->permintaanStokOutlet->outlet?->nama,
+            'id' => $p->id,
+            'distribusi' => $p->distribusiOutlet ? [
+                'id' => $p->distribusiOutlet->id,
+                'outlet' => $p->distribusiOutlet->permintaanStokOutlet?->outlet?->nama,
+                'tanggal_kirim' => $p->distribusiOutlet->tanggal_kirim?->format('Y-m-d'),
             ] : null,
-            'tanggal_kirim' => $d->tanggal_kirim?->format('Y-m-d'),
-            'status' => $d->status ? ['id' => $d->status->id, 'kode' => $d->status->kode, 'label' => $d->status->label] : null,
-            'details' => $d->details->map(fn ($item) => [
-                'id' => $item->id,
-                'tipe_item' => $item->tipe_item,
-                'bahan_baku' => $item->bahanBaku ? ['id' => $item->bahanBaku->id, 'nama' => $item->bahanBaku->nama] : null,
-                'mesin' => $item->mesin ? ['id' => $item->mesin->id, 'nama' => $item->mesin->nama] : null,
-                'jumlah_kirim' => (float) $item->jumlah_kirim,
+            'user' => $p->user?->nama,
+            'tanggal_terima' => $p->tanggal_terima?->format('Y-m-d'),
+            'details' => $p->details->map(fn ($d) => [
+                'id' => $d->id,
+                'tipe_item' => $d->tipe_item,
+                'bahan_baku' => $d->distribusiOutletDetail?->bahanBaku ? ['id' => $d->distribusiOutletDetail->bahanBaku->id, 'nama' => $d->distribusiOutletDetail->bahanBaku->nama] : null,
+                'mesin' => $d->distribusiOutletDetail?->mesin ? ['id' => $d->distribusiOutletDetail->mesin->id, 'nama' => $d->distribusiOutletDetail->mesin->nama] : null,
+                'jumlah_kirim' => (float) ($d->distribusiOutletDetail?->jumlah_kirim ?? 0),
+                'qty_diterima' => (float) $d->qty_diterima,
             ]),
-            'created_at' => $d->created_at?->toDateTimeString(),
+            'created_at' => $p->created_at?->toDateTimeString(),
         ];
     }
 }

@@ -10,9 +10,10 @@ use Illuminate\Http\JsonResponse;
 
 class BahanBakuController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(\Illuminate\Http\Request $request): JsonResponse
     {
-        $items = BahanBaku::with('kategori', 'status')->paginate(15);
+        $perPage = (int) $request->input('per_page', 15);
+        $items = BahanBaku::with('kategori', 'status')->paginate($perPage);
 
         return response()->json([
             'data' => $items->map(fn ($b) => $this->formatBahanBaku($b)),

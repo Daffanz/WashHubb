@@ -6,14 +6,13 @@ import { getOutlets } from '../../../api/outlets';
 import { getMachines } from '../../../api/machines';
 import PageHeader from '../../../components/ui/PageHeader';
 import FormSelect from '../../../components/ui/FormSelect';
-import FormInput from '../../../components/ui/FormInput';
 import FormTextarea from '../../../components/ui/FormTextarea';
 import FormGrid from '../../../components/ui/FormGrid';
 import FormActions from '../../../components/ui/FormActions';
 
 export default function ServiceForm() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ detail_mesin_id: '', outlet_id: '', deskripsi: '' });
+  const [form, setForm] = useState({ mesin_id: '', outlet_id: '', deskripsi: '' });
   const [outlets, setOutlets] = useState([]);
   const [mesins, setMesins] = useState([]);
   const [errors, setErrors] = useState({});
@@ -46,7 +45,7 @@ export default function ServiceForm() {
       <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
         <FormGrid>
           <FormSelect label="Outlet" name="outlet_id" value={form.outlet_id} onChange={handleChange} options={outlets} error={errors.outlet_id?.[0]} required placeholder="Pilih outlet" />
-          <FormSelect label="Mesin" name="detail_mesin_id" value={form.detail_mesin_id} onChange={handleChange} options={mesins} error={errors.detail_mesin_id?.[0]} required placeholder="Pilih mesin" />
+          <FormSelect label="Mesin" name="mesin_id" value={form.mesin_id} onChange={handleChange} options={mesins} error={errors.mesin_id?.[0]} required placeholder="Pilih mesin" />
           <div className="md:col-span-2">
             <FormTextarea label="Deskripsi Kerusakan" name="deskripsi" value={form.deskripsi} onChange={handleChange} error={errors.deskripsi?.[0]} required placeholder="Jelaskan kerusakan atau kebutuhan service..." />
           </div>

@@ -3,9 +3,8 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable from '../../components/ui/DataTable';
-import FormActions from '../../components/ui/FormActions';
 import ConfirmModal from '../../components/ui/ConfirmModal';
-import { getSupplierStocks, addSupplierStock, deleteSupplierStock } from '../../api/supplierStocks';
+import { getSupplierStocks, addSupplierStock, updateSupplierStock, deleteSupplierStock } from '../../api/supplierStocks';
 import { getMaterials } from '../../api/materials';
 import { getMachines } from '../../api/machines';
 import { formatQty } from '../../utils/format';
@@ -22,29 +21,29 @@ export default function SupplierStockPage() {
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
+  const [editJumlah, setEditJumlah] = useState('');
+  const [editing, setEditing] = useState(false);
 
   const fetchData = useCallback(async (p = page) => {
     setLoading(true);
     try {
       const res = await getSupplierStocks({ page: p });
       setData(res.data.data || []); setMeta(res.data.meta);
-      if (res.data.jenis_supplier) setJenisSupplier(res.data.jenis_supplier);
+      if (res.data.jenis_supplier) {
+        setJenisSupplier(res.data.jenis_supplier);
+        // Load master items immediately when jenisSupplier is known
+        if (res.data.jenis_supplier === 'bahan_baku') {
+          getMaterials({ per_page: 200 }).then(r => setMasterItems(r.data.data || [])).catch(err => console.error('Gagal load bahan baku:', err));
+        } else {
+          getMachines({ per_page: 200 }).then(r => setMasterItems(r.data.data || [])).catch(err => console.error('Gagal load mesin:', err));
+        }
+      }
     } catch { toast.error('Gagal memuat data'); }
     setLoading(false);
   }, [page]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-
-  // Load master items when form opens
-  useEffect(() => {
-    if (showForm && jenisSupplier) {
-      if (jenisSupplier === 'bahan_baku') {
-        getMaterials({ per_page: 200 }).then(res => setMasterItems(res.data.data || [])).catch(() => {});
-      } else {
-        getMachines({ per_page: 200 }).then(res => setMasterItems(res.data.data || [])).catch(() => {});
-      }
-    }
-  }, [showForm, jenisSupplier]);
 
   const addItem = () => setItems([...items, { item_id: '', jumlah: '' }]);
   const removeItem = (i) => setItems(items.filter((_, idx) => idx !== i));
@@ -52,8 +51,11 @@ export default function SupplierStockPage() {
     const n = [...items]; n[i][field] = value; setItems(n);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const getSelectedItemInfo = (itemId) => {
+    return masterItems.find(mi => String(mi.id) === String(itemId));
+  };
+
+  const handleSubmit = async () => {
     const validItems = items.filter(i => i.item_id && parseFloat(i.jumlah) > 0);
     if (validItems.length === 0) { toast.error('Minimal 1 item dengan jumlah > 0'); return; }
 
@@ -65,6 +67,20 @@ export default function SupplierStockPage() {
       fetchData();
     } catch (err) { toast.error(err.response?.data?.message || 'Gagal'); }
     setSubmitting(false);
+  };
+
+  const handleEdit = async () => {
+    const jumlah = parseFloat(editJumlah);
+    if (!jumlah || jumlah <= 0) { toast.error('Jumlah harus lebih dari 0'); return; }
+
+    setEditing(true);
+    try {
+      await updateSupplierStock(editTarget.id, { jumlah });
+      toast.success('Stok berhasil ditambahkan');
+      setEditTarget(null); setEditJumlah('');
+      fetchData();
+    } catch (err) { toast.error(err.response?.data?.message || 'Gagal'); }
+    setEditing(false);
   };
 
   const handleDelete = async () => {
@@ -106,32 +122,54 @@ export default function SupplierStockPage() {
           <h3 className="text-sm font-semibold text-gray-900 mb-2">
             Tambah Stok ({jenisSupplier === 'bahan_baku' ? 'Bahan Baku' : 'Mesin'})
           </h3>
-          <p className="text-xs text-gray-500 mb-4">Jenis item otomatis sesuai jenis supplier Anda. Bisa tambah banyak item sekaligus.</p>
+          <p className="text-xs text-gray-500 mb-4">Pilih {jenisSupplier === 'bahan_baku' ? 'bahan baku' : 'mesin'} dari data master, lalu masukkan jumlah stok. Bisa tambah banyak item sekaligus.</p>
 
           {items.length === 0 && (
             <p className="text-sm text-gray-400 text-center py-4">Klik "+ Tambah Item" di bawah</p>
           )}
 
-          {items.map((item, i) => (
-            <div key={i} className="flex items-center gap-3 mb-2 p-3 bg-gray-50 rounded-lg">
-              <div className="flex-1">
-                <select value={item.item_id} onChange={(e) => updateItem(i, 'item_id', e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-wash-500">
-                  <option value="">{jenisSupplier === 'bahan_baku' ? 'Pilih bahan baku...' : 'Pilih mesin...'}</option>
-                  {masterItems.map(mi => (
-                    <option key={mi.id} value={mi.id}>{mi.nama} {mi.satuan ? `(${mi.satuan})` : ''}</option>
-                  ))}
-                </select>
+          {items.map((item, i) => {
+            const selectedInfo = getSelectedItemInfo(item.item_id);
+            return (
+              <div key={i} className="mb-3 p-4 bg-gray-50 rounded-lg border border-gray-100">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold text-gray-500">Item #{i + 1}</span>
+                  <button type="button" onClick={() => removeItem(i)}
+                    className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition">✕ Hapus</button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      {jenisSupplier === 'bahan_baku' ? 'Bahan Baku' : 'Mesin'}
+                    </label>
+                    <select value={item.item_id} onChange={(e) => updateItem(i, 'item_id', e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-wash-500">
+                      <option value="">{jenisSupplier === 'bahan_baku' ? 'Pilih bahan baku...' : 'Pilih mesin...'}</option>
+                      {masterItems.map(mi => (
+                        <option key={mi.id} value={mi.id}>{mi.nama} {mi.satuan ? `(${mi.satuan})` : ''} {mi.kode_mesin ? `- ${mi.kode_mesin}` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Jumlah Stok</label>
+                    <input type="number" value={item.jumlah} onChange={(e) => updateItem(i, 'jumlah', e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-wash-500"
+                      placeholder="0" step="any" min="1" />
+                  </div>
+                  <div className="flex items-end">
+                    {selectedInfo && (
+                      <div className="text-xs text-gray-500 pb-2">
+                        {selectedInfo.kategori?.nama && <span className="inline-block bg-gray-200 rounded px-1.5 py-0.5 mr-1">{selectedInfo.kategori.nama}</span>}
+                        {selectedInfo.satuan && <span className="text-gray-400">{selectedInfo.satuan}</span>}
+                        {selectedInfo.harga_standar != null && <span className="text-gray-400 ml-1">Rp {Number(selectedInfo.harga_standar).toLocaleString('id-ID')}</span>}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="w-28">
-                <input type="number" value={item.jumlah} onChange={(e) => updateItem(i, 'jumlah', e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-wash-500"
-                  placeholder="Jumlah" step="any" min="1" />
-              </div>
-              <button type="button" onClick={() => removeItem(i)}
-                className="px-2 py-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition text-sm">✕</button>
-            </div>
-          ))}
+            );
+          })}
 
           <div className="flex gap-2 mt-3 mb-4">
             <button type="button" onClick={addItem}
@@ -160,6 +198,10 @@ export default function SupplierStockPage() {
         <DataTable columns={columns} data={data} loading={false} meta={meta} onPageChange={(p) => setPage(p)}
           actions={(row) => (
             <div className="flex gap-1 justify-end">
+              <button onClick={() => { setEditTarget(row); setEditJumlah(''); }}
+                className="text-xs text-emerald-600 hover:text-emerald-800 font-medium px-2 py-1 rounded hover:bg-emerald-50">
+                + Stok
+              </button>
               <Link to={`/suppliers/stock/${row.id}`} className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 rounded hover:bg-blue-50">Detail</Link>
               <button onClick={() => setDeleteTarget(row)}
                 className="text-xs text-red-600 hover:text-red-800 font-medium px-2 py-1 rounded hover:bg-red-50">
@@ -168,6 +210,34 @@ export default function SupplierStockPage() {
             </div>
           )}
         />
+      )}
+
+      {/* Modal tambah stok per item */}
+      {editTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setEditTarget(null)}></div>
+          <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Tambah Stok</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              {editTarget.bahan_baku?.nama || editTarget.mesin?.nama || 'Item'}
+              {editTarget.bahan_baku?.satuan && <span className="text-gray-400"> ({editTarget.bahan_baku.satuan})</span>}
+            </p>
+            <p className="text-xs text-gray-400 mb-3">Stok saat ini: <span className="font-semibold text-wash-800">{formatQty(editTarget.stok_saat_ini)}</span></p>
+            <input type="number" value={editJumlah} onChange={(e) => setEditJumlah(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-wash-500 mb-4"
+              placeholder="Jumlah yang ditambahkan" step="any" min="1" autoFocus />
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setEditTarget(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                Batal
+              </button>
+              <button onClick={handleEdit} disabled={editing}
+                className="px-4 py-2 text-sm font-medium text-white bg-wash-900 rounded-lg hover:bg-wash-800 transition disabled:opacity-50">
+                {editing ? 'Menyimpan...' : 'Tambah Stok'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <ConfirmModal open={!!deleteTarget} title="Hapus Stok"

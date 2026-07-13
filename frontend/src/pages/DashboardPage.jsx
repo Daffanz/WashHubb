@@ -1,10 +1,32 @@
 import React from 'react';
 import { useAuth } from '../hooks/useAuth.js';
 import PageHeader from '../components/ui/PageHeader';
+import FranchisorDashboard from './dashboard/FranchisorDashboard';
+import PengadaanDashboard from './dashboard/PengadaanDashboard';
+import SupplierDashboard from './dashboard/SupplierDashboard';
+import FranchiseeDashboard from './dashboard/FranchiseeDashboard';
+import ManajerOutletDashboard from './dashboard/ManajerOutletDashboard';
+
+const dashboardMap = {
+  franchisor: FranchisorDashboard,
+  franchise: FranchiseeDashboard,
+  procurement: PengadaanDashboard,
+  supplier: SupplierDashboard,
+  franchisee: FranchiseeDashboard,
+  manager_outlet: ManajerOutletDashboard,
+};
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const roleKode = user?.role?.kode;
+  const RoleDashboard = dashboardMap[roleKode];
 
+  // Jika ada dashboard khusus untuk role ini, render dashboard tersebut
+  if (RoleDashboard) {
+    return <RoleDashboard />;
+  }
+
+  // Default dashboard untuk admin_it dan role lainnya
   return (
     <div>
       <PageHeader title="Dashboard" breadcrumbs={[{ label: 'Home' }, { label: 'Dashboard' }]} />
